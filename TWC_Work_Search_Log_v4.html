@@ -242,6 +242,23 @@
   .stars-wrap { display: flex; align-items: center; gap: 6px; }
   .stars-num { font-size: 11.5px; color: color-mix(in srgb, var(--ink) 55%, transparent); }
 
+  /* On phones, put the date and stars/status in a compact header row above the job details,
+     instead of squeezing them into narrow side columns. */
+  @media (max-width: 640px) {
+    .row-hit {
+      grid-template-columns: 1fr auto;
+      grid-template-areas: "day side" "body body";
+      row-gap: 10px; column-gap: 12px;
+    }
+    .row-hit .day {
+      grid-area: day; display: flex; align-items: baseline; gap: 8px; text-align: left; padding-top: 0;
+    }
+    .row-hit .day .num { font-size: 19px; }
+    .row-hit .side { grid-area: side; flex-direction: row; align-items: center; gap: 10px; }
+    .row-hit .tools { opacity: 1; }
+    .row-hit .body { grid-area: body; }
+  }
+
   .empty { padding: 70px 0 40px; max-width: 460px; }
   .empty p:first-child { font-family: var(--font-serif); font-weight: 700; font-size: 22px; margin: 0 0 6px; }
   .empty p:last-child { margin: 0; font-size: 15px; color: color-mix(in srgb, var(--ink) 60%, transparent); }
@@ -464,10 +481,10 @@
 
   <div class="toolbar">
     <div class="prints">
-      <button class="btn btn-secondary" id="printBtn">Print this week</button>
-      <button class="btn btn-secondary" id="printAllBtn">Print all weeks</button>
-      <button class="btn btn-secondary" id="recalcBtn">Recalculate stars</button>
-      <button class="btn btn-secondary" id="bulkInactiveBtn">Mark inactive&hellip;</button>
+      <button class="btn btn-secondary" id="printBtn">Print week</button>
+      <button class="btn btn-secondary" id="printAllBtn">Print all</button>
+      <button class="btn btn-secondary" id="recalcBtn">Calculate stars</button>
+      <button class="btn btn-secondary" id="bulkInactiveBtn">Mark inactive</button>
     </div>
     <div class="filebar">
       <span class="filestatus" id="fileStatus">Checking for a connected data file&hellip;</span>
