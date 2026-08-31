@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TWC Work Search Activity Log</title>
+<style>
+  :root {
+    --bg: #f3f2f2;
+    --surface: #eae9e9;
+    --ink: #201e1d;
+    --neutral-100: #f8f4f4;
+    --divider: color-mix(in srgb, var(--ink) 16%, transparent);
+
+    --accent: #0088b0;
+    --accent-600: #1186ac;
+    --accent-700: #006786;
+    --accent-100: #e9f8ff;
+    --accent-800: #004961;
+
+    --accent2: #d6006c;
+    --accent2-700: #aa0b56;
+    --accent2-100: #fff1f4;
+    --accent2-800: #790e3d;
+
+    --font-serif: ui-serif, "New York", Georgia, "Times New Roman", Times, serif;
+    --radius-sm: 2px;
+    --radius-md: 3px;
+    --radius-lg: 6px;
+    --shadow-lg: 0 12px 32px color-mix(in srgb, #000 22%, transparent);
+    color-scheme: light;
+  }
+
+  /* Dark theme: system preference (unless explicitly set to light) ... */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #1b1a19;
+      --surface: #252423;
+      --ink: #ece8e4;
+      --neutral-100: #2b2a28;
+
+      --accent: #4fb8dd;
+      --accent-600: #7cc9e6;
+      --accent-700: #9ad7ee;
+      --accent-100: #113542;
+      --accent-800: #a8e6fb;
+
+      --accent2: #ff5c96;
+      --accent2-700: #ff86b3;
+      --accent2-100: #3a1420;
+      --accent2-800: #ffb3cc;
+    }
+  }
+  /* ... or explicitly forced via the theme switcher */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #1b1a19;
+    --surface: #252423;
+    --ink: #ece8e4;
+    --neutral-100: #2b2a28;
+
+    --accent: #4fb8dd;
+    --accent-600: #7cc9e6;
+    --accent-700: #9ad7ee;
+    --accent-100: #113542;
+    --accent-800: #a8e6fb;
+
+    --accent2: #ff5c96;
+    --accent2-700: #ff86b3;
+    --accent2-100: #3a1420;
+    --accent2-800: #ffb3cc;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-serif);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    padding: 46px 24px 170px;
+  }
+
+  .shell { max-width: 1080px; margin: 0 auto; }
+
+  /* ---------- header ---------- */
+  header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 40px; flex-wrap: wrap;
+  }
+  .eyebrow {
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--ink) 55%, transparent);
+  }
+  h1 { font-size: 42px; margin: 10px 0 0; letter-spacing: -.02em; font-weight: 700; }
+  .sub { margin: 10px 0 0; font-size: 15px; color: color-mix(in srgb, var(--ink) 65%, transparent); max-width: 560px; }
+
+  .resources { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; min-width: 220px; }
+  .resources .rlabel {
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--ink) 50%, transparent);
+  }
+  .resources .rlinks { display: flex; flex-wrap: wrap; gap: 14px; font-size: 14px; }
+  .resources a { color: var(--accent); text-decoration: underline; }
+  .resources a:hover { color: var(--accent-700); }
+
+  .theme-toggle { display: flex; gap: 4px; margin-top: 4px; }
+  .theme-toggle button {
+    font-family: var(--font-serif); font-size: 12px; cursor: pointer;
+    padding: 3px 9px; border-radius: var(--radius-sm); border: 1px solid var(--divider);
+    background: var(--bg); color: var(--ink);
+  }
+  .theme-toggle button:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+  .theme-toggle button.active {
+    background: var(--accent); color: var(--bg); border-color: var(--accent);
+  }
+
+  /* ---------- week bar ---------- */
+  .weekbar {
+    display: flex; align-items: baseline; gap: 22px; flex-wrap: wrap;
+    padding: 48px 0 6px;
+  }
+  .stepper { display: flex; align-items: center; gap: 2px; }
+  h2 { margin: 0; font-size: 32px; letter-spacing: -.02em; font-weight: 700; }
+  h2 .yr { color: color-mix(in srgb, var(--ink) 40%, transparent); }
+  .weektally { margin-left: auto; display: flex; align-items: baseline; gap: 12px; }
+
+  .tag {
+    display: inline-flex; align-items: center; font-size: 11px; letter-spacing: .02em;
+    padding: 3px 10px; border-radius: var(--radius-sm);
+  }
+  .tag-met { background: var(--accent-100); color: var(--accent-800); }
+  .tag-short { background: var(--accent2-100); color: var(--accent2-800); }
+  .weektally .note { font-size: 13px; color: color-mix(in srgb, var(--ink) 50%, transparent); }
+  .stepper.off { opacity: .35; pointer-events: none; }
+
+  /* ---------- filter popover ---------- */
+  .filterwrap { position: relative; align-self: center; }
+  .pop {
+    position: fixed; z-index: 35;
+    width: min(330px, calc(100vw - 24px));
+    max-height: calc(100vh - 24px); overflow: auto; overscroll-behavior: contain;
+    background: var(--neutral-100); border: 1px solid var(--divider);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 18px 20px 20px;
+    display: none; text-align: left;
+  }
+  .pop.open { display: block; }
+  .pop section + section { margin-top: 16px; }
+  .pop h4 {
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600;
+    color: color-mix(in srgb, var(--ink) 50%, transparent); margin-bottom: 8px;
+  }
+  .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .scroll-opts { max-height: 148px; overflow: auto; overscroll-behavior: contain; padding-right: 2px; }
+
+  /* collapsible company picker inside the filter popover */
+  .disclose {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+    font: inherit; font-size: 13.5px; text-align: left; cursor: pointer;
+    background: none; color: inherit; padding: 7px 10px;
+    border: 1px solid var(--divider); border-radius: var(--radius-md);
+  }
+  .disclose:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+  .disclose .caret { font-size: 11px; opacity: .6; }
+  .disclose.on { border-color: var(--accent); color: var(--accent-800); }
+  .disclose-body { display: none; margin-top: 8px; }
+  .disclose-body.open { display: block; }
+  .opt {
+    display: inline-flex; align-items: center; font-size: 13px; padding: 4px 10px;
+    border: 1px solid var(--divider); border-radius: 999px; cursor: pointer; user-select: none;
+  }
+  .opt:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+  .opt input { display: none; }
+  .opt.on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .slider-row { display: flex; align-items: center; gap: 12px; }
+  .slider-row input[type=range] { flex: 1; accent-color: var(--accent); }
+  .slider-val { font-size: 13px; min-width: 62px; text-align: right; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 14px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px;
+    padding: 4px 5px 4px 11px; border-radius: 999px;
+    background: var(--accent-100); color: var(--accent-800);
+  }
+  .chip button {
+    border: 0; background: none; cursor: pointer; color: inherit;
+    font-size: 15px; line-height: 1; padding: 0 4px; font-family: inherit;
+  }
+  .chip button:hover { color: var(--accent2-700); }
+
+  /* ---------- buttons ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer; text-decoration: none; font-family: var(--font-serif); font-weight: 600;
+    font-size: 14px; line-height: 1.2; color: var(--ink); background: transparent;
+    border: 1px solid transparent; padding: 9px 15px; border-radius: var(--radius-md);
+  }
+  .btn-primary { background: var(--accent); color: var(--bg); }
+  .btn-primary:hover { background: var(--accent-600); }
+  .btn-secondary { border-color: var(--divider); background: var(--bg); }
+  .btn-secondary:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+  .btn-ghost { color: var(--accent); padding-inline: 5px; }
+  .btn-ghost:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .btn-ghost.danger { color: var(--accent2-700); }
+  .btn-ghost.danger:hover { background: color-mix(in srgb, var(--accent2) 10%, transparent); }
+  .btn-icon { width: 34px; height: 34px; padding: 0; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* ---------- entries ---------- */
+  .entries { margin-top: 26px; }
+  .row-hit {
+    display: grid; grid-template-columns: 74px minmax(0,1fr) auto; gap: 24px;
+    align-items: start; padding: 20px 12px 20px 0; border-top: 1px solid var(--divider);
+  }
+  .row-hit:hover { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+  .day { text-align: right; padding-top: 3px; }
+  .day .dow { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: color-mix(in srgb, var(--ink) 45%, transparent); }
+  .day .num { font-family: var(--font-serif); font-weight: 700; font-size: 27px; line-height: 1.05; }
+  .day .mon { font-size: 11px; margin-top: 2px; color: color-mix(in srgb, var(--ink) 45%, transparent); }
+  .body { min-width: 0; }
+  .body .title { font-family: var(--font-serif); font-weight: 700; font-size: 19px; letter-spacing: -.01em; }
+  .body .co { font-size: 14.5px; margin-top: 2px; color: color-mix(in srgb, var(--ink) 72%, transparent); }
+  .body .act { font-size: 14.5px; margin-top: 8px; color: color-mix(in srgb, var(--ink) 62%, transparent); }
+  .body .meta { font-size: 13px; margin-top: 6px; color: color-mix(in srgb, var(--ink) 55%, transparent); }
+  .body .link { margin-top: 6px; font-size: 13px; overflow-wrap: anywhere; }
+  .body .link a { color: var(--accent); text-decoration: none; }
+  .body .link a:hover { text-decoration: underline; }
+  .body .result { margin-top: 10px; }
+  .tag-neutral { background: var(--neutral-100); color: color-mix(in srgb, var(--ink) 80%, transparent); }
+  .tag-inactive { background: var(--accent2-100); color: var(--accent2-800); }
+  .side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+  .tools {
+    display: flex; gap: 4px; opacity: 0; transition: opacity .12s ease;
+  }
+  .row-hit:hover .tools, .row-hit:focus-within .tools { opacity: 1; }
+  .stars { position: relative; display: inline-block; font-size: 15px; line-height: 1; letter-spacing: 1px; }
+  .stars-bg { color: var(--divider); }
+  .stars-fg {
+    position: absolute; top: 0; left: 0; overflow: hidden; width: 0; white-space: nowrap; color: var(--accent);
+  }
+  .stars-wrap { display: flex; align-items: center; gap: 6px; }
+  .stars-num { font-size: 11.5px; color: color-mix(in srgb, var(--ink) 55%, transparent); }
+
+  .empty { padding: 70px 0 40px; max-width: 460px; }
+  .empty p:first-child { font-family: var(--font-serif); font-weight: 700; font-size: 22px; margin: 0 0 6px; }
+  .empty p:last-child { margin: 0; font-size: 15px; color: color-mix(in srgb, var(--ink) 60%, transparent); }
+
+  /* ---------- bottom toolbar ---------- */
+  .toolbar {
+    display: flex; align-items: baseline; gap: 22px; flex-wrap: wrap;
+    padding: 54px 0 0; border-top: 1px solid var(--divider); margin-top: 34px;
+  }
+  .toolbar .prints { display: flex; gap: 10px; }
+  .filebar { margin-left: auto; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .filebar .filestatus { font-size: 13px; color: color-mix(in srgb, var(--ink) 60%, transparent); }
+  .filebar .filestatus.warn { color: var(--accent2-700); font-weight: 600; }
+
+  .disclaimer {
+    margin: 30px 0 0; font-size: 12.5px; line-height: 1.6; max-width: 760px;
+    color: color-mix(in srgb, var(--ink) 50%, transparent);
+  }
+
+  /* ---------- sticky add bar ---------- */
+  .addbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    padding: 0 24px 22px; pointer-events: none;
+  }
+  .addbar-inner { max-width: 1080px; margin: 0 auto; display: flex; justify-content: flex-start; }
+  .addbar-card {
+    pointer-events: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--neutral-100); box-shadow: var(--shadow-lg); border-radius: var(--radius-lg);
+    padding: 12px 16px;
+  }
+  .addbar-card .qlabel {
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--ink) 45%, transparent); margin-left: 6px;
+  }
+  .addbar-card .btn-secondary { font-size: 13.5px; padding: 7px 13px; }
+
+  /* ---------- dialog / panel ---------- */
+  .dialog-backdrop {
+    position: fixed; inset: 0; z-index: 40; display: grid; place-items: start center;
+    padding: 40px 20px; overflow: auto;
+    background: color-mix(in srgb, #2d2b2b 50%, transparent);
+  }
+  .dialog {
+    width: min(860px, 100%); background: var(--neutral-100); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg); padding: 30px 34px 34px;
+  }
+  .dialog-head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
+  .dialog-head h3 { margin: 0; font-size: 26px; letter-spacing: -.02em; }
+
+  .grid6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px 18px; margin-top: 24px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 18px; margin-top: 14px; }
+  @media (max-width: 640px) {
+    .grid6, .grid4 { grid-template-columns: repeat(2, 1fr); }
+  }
+  .field label {
+    display: block; font-size: 12px; margin-bottom: 5px;
+    color: color-mix(in srgb, var(--ink) 70%, transparent);
+  }
+  .input {
+    width: 100%; min-height: 38px; padding: 7px 10px; font-family: inherit; font-size: 14px;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--divider);
+    border-radius: var(--radius-md);
+  }
+  .input::placeholder { color: color-mix(in srgb, var(--ink) 32%, transparent); font-style: italic; }
+  .input:hover { border-color: color-mix(in srgb, var(--ink) 45%, transparent); }
+  .input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+  textarea.input { min-height: 76px; resize: vertical; }
+
+  .span1 { grid-column: span 1; } .span2 { grid-column: span 2; }
+  .span3 { grid-column: span 3; } .span4 { grid-column: span 4; } .span6 { grid-column: span 6; }
+  @media (max-width: 640px) {
+    .span1, .span2, .span3, .span4, .span6 { grid-column: span 2; }
+  }
+
+  .extra-toggle { margin-top: 18px; }
+  .extra-toggle .btn-ghost { padding-inline: 0; }
+
+  .dialog-actions { display: flex; gap: 12px; align-items: center; margin-top: 28px; }
+  .dialog-actions .hint {
+    font-size: 12.5px; color: color-mix(in srgb, var(--ink) 50%, transparent); margin-left: auto;
+  }
+
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #201e1d; color: #fff; padding: 10px 18px; border-radius: var(--radius-md);
+    font-size: 13px; opacity: 0; transition: all .25s ease; pointer-events: none; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .printout { display: none; }
+
+  @media print {
+    @page { size: letter landscape; margin: 0.3in; }
+    body { background: #fff; padding: 0; }
+    .shell, .addbar { display: none; }
+    .printout { display: block; }
+
+    .sheet { page-break-after: always; }
+    .sheet:last-child { page-break-after: auto; }
+
+    .form-title { text-align: center; font-size: 12.5pt; font-weight: 600; margin-bottom: 7pt; font-family: ui-serif, "New York", Georgia, "Times New Roman", serif; }
+    .form-head { width: 100%; font-size: 8.5pt; margin-bottom: 5pt; }
+    .form-head td { padding: 2pt 0; vertical-align: bottom; }
+    .fill { border-bottom: .6pt solid #000; display: inline-block; min-width: 130pt; padding: 0 3pt; }
+    .fill.wide { min-width: 175pt; }
+    .fill.sm { min-width: 60pt; }
+
+    .advisory { font-size: 6.8pt; line-height: 1.35; margin-bottom: 4pt; }
+
+    table.log { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    table.log th, table.log td { border: .7pt solid #000; vertical-align: top; }
+    table.log th { font-size: 7.5pt; padding: 3pt 4pt; text-align: center; font-weight: 700; }
+    table.log th .ex { display: block; font-weight: 400; font-size: 6.2pt; line-height: 1.25; margin-top: 1pt; }
+    table.log td { padding: 4pt 5pt; font-size: 8pt; height: 78pt; }
+    col.c1 { width: 27%; } col.c2 { width: 27%; } col.c3 { width: 26%; } col.c4 { width: 20%; }
+
+    .cell-line { margin-bottom: 3.5pt; line-height: 1.3; }
+    .cell-line .lbl { font-size: 6.5pt; text-transform: uppercase; letter-spacing: .03em; }
+    .cell-line .val { font-size: 8pt; word-break: break-word; }
+    .cell-line .val.url { font-size: 6.8pt; }
+    .dotted { border-bottom: .5pt dotted #555; min-height: 9pt; }
+
+    .res-opt { font-size: 7.5pt; margin-bottom: 3pt; }
+    .res-opt .box { display: inline-block; width: 7pt; height: 7pt; border: .7pt solid #000; margin-right: 3pt; vertical-align: -1pt; text-align: center; line-height: 6.5pt; font-size: 7pt; }
+
+    .form-foot { font-size: 6.5pt; margin-top: 4pt; line-height: 1.35; }
+    .form-no { font-size: 6.5pt; margin-top: 2pt; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <header>
+    <div style="max-width:600px;">
+      <div class="eyebrow">Texas Workforce Commission &middot; Form BN90DE</div>
+      <h1>Work Search Activity Log</h1>
+      <p class="sub">Three activities required each week. Weeks run Sunday through Saturday.</p>
+    </div>
+    <div class="resources">
+      <span class="rlabel">Resources</span>
+      <div class="rlinks">
+        <a href="https://apps.twc.texas.gov/UBS/security/logon.do" target="_blank" rel="noopener">TWC</a>
+        <a href="https://www.linkedin.com/jobs/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://www.workintexas.com/" target="_blank" rel="noopener">WorkInTexas</a>
+        <a href="https://login.risesmart.com/login" target="_blank" rel="noopener">RiseSmart</a>
+        <a href="https://my.greenhouse.io/jobs/search?query=Software&location=Austin%2C%20Texas%2C%20United%20States&lat=30.222346&lon=-97.836521&location_type=locality&country_short_name=US&state_short_name=TX&date_posted=past_thirty_days&salary=more_than_180k&work_type[]=hybrid&work_type[]=remote&employment_type[]=full_time" target="_blank" rel="noopener">Greenhouse</a>
+      </div>
+      <span class="rlabel" style="margin-top:6px;">Theme</span>
+      <div class="theme-toggle" id="themeToggle">
+        <button data-theme-choice="light">Light</button>
+        <button data-theme-choice="dark">Dark</button>
+        <button data-theme-choice="system">System</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="weekbar">
+    <div class="stepper" id="stepper">
+      <button class="btn btn-secondary btn-icon" id="prev" title="Previous week" aria-label="Previous week">&#8249;</button>
+      <button class="btn btn-secondary btn-icon" id="next" title="Next week" aria-label="Next week">&#8250;</button>
+    </div>
+    <h2 id="weeklabel"></h2>
+    <button class="btn btn-ghost" id="today">This week</button>
+    <div class="weektally" id="weektally">
+      <span class="tag" id="statusTag"></span>
+      <span class="note" id="statusNote"></span>
+    </div>
+    <div class="filterwrap">
+      <button class="btn btn-secondary" id="filterBtn" aria-haspopup="true">Filter</button>
+      <div class="pop" id="filterPop">
+        <section>
+          <h4>Status</h4>
+          <div class="opts" id="fStatus"></div>
+        </section>
+        <section>
+          <h4>Activity type</h4>
+          <div class="opts" id="fTypes"></div>
+        </section>
+        <section>
+          <h4>Workplace</h4>
+          <div class="opts" id="fPlaces"></div>
+        </section>
+        <section>
+          <h4>Company</h4>
+          <button type="button" class="disclose" id="companyToggle" aria-expanded="false">
+            <span id="companySummary">All companies</span>
+            <span class="caret">&#9662;</span>
+          </button>
+          <div class="disclose-body" id="companyBody">
+            <input class="input" type="text" id="fCompanySearch" placeholder="Find a company" autocomplete="off" style="margin-bottom:8px;">
+            <div class="opts scroll-opts" id="fCompanies"></div>
+          </div>
+        </section>
+        <section>
+          <h4>Stars, at least</h4>
+          <div class="slider-row">
+            <input type="range" id="fStars" min="0" max="5" step="0.5" value="0">
+            <span class="slider-val" id="fStarsVal">Any</span>
+          </div>
+        </section>
+        <section>
+          <h4>Top of salary range, at least</h4>
+          <div class="slider-row">
+            <input type="range" id="fSalary" min="0" max="400" step="10" value="0">
+            <span class="slider-val" id="fSalaryVal">Any</span>
+          </div>
+        </section>
+        <section>
+          <h4>City</h4>
+          <input class="input" type="text" id="fCity" placeholder="Austin" autocomplete="off">
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="chips" id="filterchips" style="display:none;"></div>
+
+  <div class="entries" id="entries"></div>
+
+  <div class="toolbar">
+    <div class="prints">
+      <button class="btn btn-secondary" id="printBtn">Print this week</button>
+      <button class="btn btn-secondary" id="printAllBtn">Print all weeks</button>
+      <button class="btn btn-secondary" id="recalcBtn">Recalculate stars</button>
+      <button class="btn btn-secondary" id="bulkInactiveBtn">Mark inactive&hellip;</button>
+    </div>
+    <div class="filebar">
+      <span class="filestatus" id="fileStatus">Checking for a connected data file&hellip;</span>
+      <div id="fsButtons" style="display:none;">
+        <button class="btn btn-ghost" id="connectBtn">Open JSON file</button>
+        <button class="btn btn-ghost" id="newFileBtn">Create JSON file</button>
+      </div>
+      <div id="fallbackButtons" style="display:none;">
+        <button class="btn btn-ghost" id="importBtn">Import JSON</button>
+        <button class="btn btn-ghost" id="exportBtn">Export JSON</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none">
+      </div>
+    </div>
+  </div>
+
+  <p class="disclaimer">
+    Entries save to a JSON file you choose on your computer (Chrome and Edge), or stay in this browser with manual
+    import and export elsewhere. Your Name and Social Security number is deliberately not collected — write it on
+    the printed form by hand. For a PDF, print and choose Save as PDF in landscape, and in "More settings" turn off
+    "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
+    so it can't be turned off automatically.
+  </p>
+</div>
+
+<div class="addbar">
+  <div class="addbar-inner">
+    <div class="addbar-card">
+      <button class="btn btn-primary" id="addBtn">Add activity</button>
+      <span class="qlabel">Quick</span>
+      <button class="btn btn-secondary" data-t="applied">Applied online</button>
+      <button class="btn btn-secondary" data-t="recruiter">Recruiter call</button>
+      <button class="btn btn-secondary" data-t="interview">Interview</button>
+      <button class="btn btn-secondary" data-t="search">Job search</button>
+      <button class="btn btn-secondary" data-t="networking">Networking</button>
+      <button class="btn btn-secondary" data-t="training">Training</button>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-backdrop" id="panelBackdrop" style="display:none;">
+  <div class="dialog">
+    <div class="dialog-head">
+      <h3 id="panelTitle">New activity</h3>
+      <button class="btn btn-ghost" id="panelClose">Close</button>
+    </div>
+
+    <div class="grid6">
+      <div class="field span2">
+        <label for="f-date">Date</label>
+        <input id="f-date" class="input" type="date">
+      </div>
+      <div class="field span4">
+        <label for="f-title">Job title</label>
+        <input id="f-title" class="input" type="text" placeholder="Principal Software Engineer" autocomplete="off">
+      </div>
+      <div class="field span3">
+        <label for="f-company">Employer or agency</label>
+        <input id="f-company" class="input" type="text" placeholder="Company name" autocomplete="off">
+      </div>
+      <div class="field span1">
+        <label for="f-workplace">Workplace</label>
+        <select id="f-workplace" class="input">
+          <option value="">Unspecified</option>
+          <option value="remote">Remote</option>
+          <option value="hybrid">Hybrid</option>
+          <option value="onsite">On-site</option>
+        </select>
+      </div>
+      <div class="field span1">
+        <label for="f-sal-low">Salary low, k</label>
+        <input id="f-sal-low" class="input" type="number" min="0" step="5" placeholder="190" autocomplete="off">
+      </div>
+      <div class="field span1">
+        <label for="f-sal-high">Salary high, k</label>
+        <input id="f-sal-high" class="input" type="number" min="0" step="5" placeholder="220" autocomplete="off">
+      </div>
+      <div class="field span6">
+        <label for="f-url">Job posting link</label>
+        <input id="f-url" class="input" type="text" placeholder="https://" autocomplete="off">
+      </div>
+      <div class="field span6">
+        <label for="f-activity">Work search activity</label>
+        <textarea id="f-activity" class="input"></textarea>
+      </div>
+      <div class="field span3">
+        <label for="f-person">Person contacted</label>
+        <input id="f-person" class="input" type="text" placeholder="Leave blank for online applications" autocomplete="off">
+      </div>
+      <div class="field span2">
+        <label for="f-bonus">Bonus</label>
+        <input id="f-bonus" class="input" type="text" placeholder="10%" autocomplete="off">
+      </div>
+      <div class="field span1">
+        <label for="f-stars" id="starsLabel" style="cursor:help;">Stars &#9733;</label>
+        <input id="f-stars" class="input" type="number" min="0" max="5" step="0.5" placeholder="auto">
+      </div>
+      <div class="field span6">
+        <label for="f-notes">Notes</label>
+        <textarea id="f-notes" class="input" placeholder="Private notes — not shown on the main list or on print"></textarea>
+      </div>
+    </div>
+
+    <div class="extra-toggle">
+      <button class="btn btn-ghost" id="extraToggle">City, address, type, email, phone, result, status, equity, star rating inputs</button>
+    </div>
+    <div class="grid4" id="extraFields" style="display:none;">
+      <div class="field">
+        <label for="f-city">City, state, ZIP</label>
+        <input id="f-city" class="input" type="text" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-type">Activity type</label>
+        <select id="f-type" class="input">
+          <option value="">Untyped</option>
+          <option value="applied">Applied online</option>
+          <option value="recruiter">Recruiter call</option>
+          <option value="interview">Interview</option>
+          <option value="search">Job board search</option>
+          <option value="networking">Networking</option>
+          <option value="training">Training</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-address">Street or internet address</label>
+        <input id="f-address" class="input" type="text" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Compensation extras</label>
+        <div class="opts">
+          <label class="opt" data-chk="f-equity"><input type="checkbox" id="f-equity">Equity</label>
+          <label class="opt" data-chk="f-retirement"><input type="checkbox" id="f-retirement">401k</label>
+        </div>
+      </div>
+      <div class="field span2">
+        <label for="f-compensation">Compensation note, free text</label>
+        <input id="f-compensation" class="input" type="text" placeholder="Anything the numbers above don't capture" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-email">Email</label>
+        <input id="f-email" class="input" type="text" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-phone">Phone</label>
+        <input id="f-phone" class="input" type="text" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-detail">Result detail</label>
+        <input id="f-detail" class="input" type="text" placeholder="Start date, or what happened" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-result">Result</label>
+        <select id="f-result" class="input">
+          <option value="application">Application filed</option>
+          <option value="other">Other</option>
+          <option value="nothiring">Not hiring</option>
+          <option value="hired">Hired</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-status">Status</label>
+        <select id="f-status" class="input">
+          <option value="">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <div class="field span2">
+        <label for="f-techmatch">Tech stack match</label>
+        <select id="f-techmatch" class="input">
+          <option value="">Assume medium (0.5&#9733;)</option>
+          <option value="high">High, 75%+ (1&#9733;)</option>
+          <option value="medium">Medium, 35&ndash;75% (0.5&#9733;)</option>
+          <option value="low">Low, under 35% (0&#9733;)</option>
+        </select>
+      </div>
+      <div class="field span2">
+        <label for="f-missionfit">Mission / industry fit</label>
+        <select id="f-missionfit" class="input">
+          <option value="">Assume neutral (0.5&#9733;)</option>
+          <option value="good">Good mission / industry I like (1&#9733;)</option>
+          <option value="neutral">Neutral company (0.5&#9733;)</option>
+          <option value="poor">Mission I don't support (0&#9733;)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="dialog-actions">
+      <button class="btn btn-primary" id="saveBtn">Save activity</button>
+      <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+      <span class="hint">&#8984;&crarr; saves &middot; Esc closes</span>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-backdrop" id="confirmBackdrop" style="display:none;">
+  <div class="dialog" style="width:min(420px,100%);">
+    <div class="dialog-head">
+      <h3 style="font-size:20px;">Delete this activity?</h3>
+      <button class="btn btn-ghost" id="confirmClose">Close</button>
+    </div>
+    <p id="confirmText" style="margin-top:10px; font-size:14px; color:color-mix(in srgb, var(--ink) 75%, transparent);"></p>
+    <div class="dialog-actions">
+      <button class="btn btn-ghost danger" id="confirmDeleteBtn">Delete</button>
+      <button class="btn btn-secondary" id="confirmCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-backdrop" id="bulkBackdrop" style="display:none;">
+  <div class="dialog" style="width:min(520px,100%);">
+    <div class="dialog-head">
+      <h3 style="font-size:22px;">Mark activities inactive</h3>
+      <button class="btn btn-ghost" id="bulkClose">Close</button>
+    </div>
+    <p style="margin-top:10px; font-size:14px; color:color-mix(in srgb, var(--ink) 70%, transparent);">
+      Pick a company, and optionally narrow to one job title or posting link. Every matching activity is set to
+      Inactive, which drops it to zero stars. Nothing is deleted.
+    </p>
+    <div class="grid4" style="grid-template-columns:1fr;">
+      <div class="field">
+        <label for="b-company">Company</label>
+        <select id="b-company" class="input"></select>
+      </div>
+      <div class="field">
+        <label for="b-title">Job title</label>
+        <select id="b-title" class="input" disabled></select>
+      </div>
+      <div class="field">
+        <label for="b-url">Job posting link</label>
+        <select id="b-url" class="input" disabled></select>
+      </div>
+      <div class="field">
+        <label for="b-reason">Add a note</label>
+        <select id="b-reason" class="input">
+          <option value="rejected">Rejected</option>
+          <option value="withdrawn">Withdrawn</option>
+          <option value="closed">Position closed</option>
+          <option value="noresponse">No response</option>
+          <option value="">No reason, timestamp only</option>
+        </select>
+      </div>
+    </div>
+    <p id="bulkCount" style="margin-top:16px; font-size:14px;"></p>
+    <div class="dialog-actions">
+      <button class="btn btn-primary" id="bulkApplyBtn">Mark inactive</button>
+      <button class="btn btn-secondary" id="bulkCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="printout" id="printout"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = 'twc-worksearch-v1';
+const FS_SUPPORTED = 'showOpenFilePicker' in window;
+
+/* ---------- Star rating rules (also stored in the JSON, sibling of activities) ---------- */
+const DEFAULT_RULES = {
+  location: { remote: 1, hybrid: 0.5, onsite: 0 },
+  salary: { match: 1, unknown: 0.5, lower: 0 },
+  stack: { high: 1, medium: 0.5, low: 0 },
+  mission: { good: 1, neutral: 0.5, poor: 0 },
+  interaction: { yes: 1, no: 0 },
+  minSalaryK: 180,
+  notes: 'Star rating (0-5, half-star steps) = location + salary + stack + mission + interaction. ' +
+    'Location: remote=1, hybrid=0.5, on-site=0 (inferred from the Location field). ' +
+    'Salary: matches target (>= minSalaryK)=1, unknown/not listed=0.5, below target=0 (inferred from the Compensation field). ' +
+    'Tech stack match: 75%+=1, 35-75%=0.5, under 35%=0 (set manually, per activity). ' +
+    'Company mission / industry fit: good or liked industry=1, neutral company=0.5, mission I do not support (e.g. surveillance, weapons, war contractors)=0 (set manually, per activity). ' +
+    'Human interaction: any recruiter/hiring-manager call, interview, or networking referral=1, online application only with no contact yet=0 (inferred from Person contacted, Result, and the activity/result-detail text). ' +
+    'Inactive activities are always 0 stars regardless of the above.'
+};
+function getRules() { return state.rules || DEFAULT_RULES; }
+function inferLocationRating(a, rules) {
+  const l = loc(a);
+  if (l.workplace && rules.location[l.workplace] != null) return rules.location[l.workplace];
+  const addr = (l.address + ' ' + l.city).toLowerCase().trim();
+  if (!addr) return 0.5;
+  if (addr.includes('remote')) return rules.location.remote;
+  if (addr.includes('hybrid')) return rules.location.hybrid;
+  return rules.location.onsite;
+}
+function inferSalaryRating(a, rules) {
+  const top = salaryTop(a);
+  if (!top) return rules.salary.unknown;
+  return top >= rules.minSalaryK ? rules.salary.match : rules.salary.lower;
+}
+function inferInteractionRating(a, rules) {
+  if (a.person && a.person.trim()) return rules.interaction.yes;
+  const text = ((a.activity || '') + ' ' + (a.detail || '')).toLowerCase();
+  if (/interview|recruiter|referral|networking|phone call|hiring manager|professional connection/.test(text)) return rules.interaction.yes;
+  if (a.result && a.result !== 'application') return rules.interaction.yes;
+  return rules.interaction.no;
+}
+function calcStars(a) {
+  if (a.status === 'inactive') return 0;
+  const rules = getRules();
+  const loc = inferLocationRating(a, rules);
+  const sal = inferSalaryRating(a, rules);
+  const stack = (a.techMatch && rules.stack[a.techMatch] != null) ? rules.stack[a.techMatch] : rules.stack.medium;
+  const mission = (a.missionFit && rules.mission[a.missionFit] != null) ? rules.mission[a.missionFit] : rules.mission.neutral;
+  const interaction = inferInteractionRating(a, rules);
+  return Math.max(0, Math.min(5, loc + sal + stack + mission + interaction));
+}
+function effectiveStars(a) {
+  if (a.status === 'inactive') return 0;
+  return typeof a.stars === 'number' ? a.stars : calcStars(a);
+}
+function renderStars(value) {
+  const pct = Math.max(0, Math.min(5, value)) / 5 * 100;
+  return '<div class="stars-wrap"><div class="stars" title="' + value.toFixed(1) + ' / 5 stars">' +
+    '<span class="stars-bg">&#9733;&#9733;&#9733;&#9733;&#9733;</span>' +
+    '<span class="stars-fg" style="width:' + pct + '%">&#9733;&#9733;&#9733;&#9733;&#9733;</span>' +
+    '</div><span class="stars-num">' + value.toFixed(1) + '</span></div>';
+}
+
+let state = { activities: [], deleted: [], rules: DEFAULT_RULES };
+let filters = { status: '', types: [], workplaces: [], companies: [], minStars: 0, minSalary: 0, city: '' };
+let chipHandlers = [];
+let anchor = new Date();
+let editingId = null;
+let fileHandle = null;
+let fileHandleVerified = false;
+
+const $ = id => document.getElementById(id);
+
+/* ---------- Theme: light / dark / system ---------- */
+const THEME_KEY = 'twc-worksearch-theme';
+function applyTheme(mode) {
+  const root = document.documentElement;
+  if (mode === 'light' || mode === 'dark') root.setAttribute('data-theme', mode);
+  else root.removeAttribute('data-theme');
+  document.querySelectorAll('#themeToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.themeChoice === mode);
+  });
+}
+(function initTheme() {
+  applyTheme(localStorage.getItem(THEME_KEY) || 'system');
+  document.querySelectorAll('#themeToggle button').forEach(b => {
+    b.onclick = () => { localStorage.setItem(THEME_KEY, b.dataset.themeChoice); applyTheme(b.dataset.themeChoice); };
+  });
+})();
+
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MON_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const TEMPLATES = {
+  applied: { label:'Applied online', result:'application',
+    activity:'Applied for the position online and submitted my resume.', detail:'' },
+  recruiter: { label:'Recruiter call', result:'other',
+    activity:'Phone call with recruiter to discuss the role, my background, and next steps in the hiring process.',
+    detail:'Recruiter screening call completed.' },
+  interview: { label:'Interview', result:'other',
+    activity:'Interviewed for the position with the hiring team.', detail:'Interview completed. Awaiting next steps.' },
+  search: { label:'Job board search', result:'other',
+    activity:'Searched online job boards for open Principal and Staff Software Engineer positions, reviewed listings, and evaluated openings against my background.',
+    company:'LinkedIn Jobs', address:'linkedin.com/jobs', detail:'Identified roles matching my background for follow-up.',
+    status:'inactive', notes:'Job board search log, not an actual application — excluded from star ranking.' },
+  networking: { label:'Networking', result:'other',
+    activity:'Contacted a professional connection to discuss openings and request a referral.', detail:'' },
+  training: { label:'Training', result:'other',
+    activity:'Completed a training course to build skills relevant to the positions I am seeking.', detail:'',
+    status:'inactive', notes:'Training activity, not an application \u2014 excluded from star ranking.' }
+};
+
+/* ---------- Enumerated values: one source of truth for storage keys and labels ---------- */
+const WORKPLACE = Object.freeze({ remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site' });
+const ACTIVITY_TYPES = Object.freeze(Object.fromEntries(Object.keys(TEMPLATES).map(k => [k, TEMPLATES[k].label])));
+
+/* ---------- Location: stored as { workplace, address, city }, all optional ---------- */
+function loc(a) {
+  const l = (a && a.location) || {};
+  return {
+    workplace: l.workplace || a.workplace || '',
+    address: l.address || a.address || '',
+    city: l.city || a.city || ''
+  };
+}
+function locationFrom(workplace, address, city) {
+  const out = {};
+  if (workplace) out.workplace = workplace;
+  if (address) out.address = address;
+  if (city) out.city = city;
+  return Object.keys(out).length ? out : null;
+}
+function locationText(a) {
+  const l = loc(a);
+  return [WORKPLACE[l.workplace] || '', l.address, l.city].filter(Boolean);
+}
+
+/* ---------- Salary: stored as { low, high, bonus, equity, retirement }, all optional ---------- */
+function parseCompensation(str) {
+  const s = String(str == null ? '' : str).trim();
+  if (!s) return null;
+  const out = {};
+  const bonusMatch = s.match(/(\d+(?:\.\d+)?)\s*%/);
+  if (bonusMatch) out.bonus = bonusMatch[1] + '%';
+  else if (/\bbonus\b/i.test(s)) out.bonus = 'yes';
+  if (/equity|rsu|stock|option/i.test(s)) out.equity = true;
+  if (/401\s*\(?k\)?|retirement/i.test(s)) out.retirement = true;
+  /* Strip retirement and percentage tokens so "401k" and "10%" are never read as salary figures */
+  const salaryPart = s.replace(/401\s*\(?k\)?/gi, ' ').replace(/\d+(?:\.\d+)?\s*%/g, ' ');
+  const nums = (salaryPart.match(/\d[\d,.]*/g) || [])
+    .map(n => parseFloat(n.replace(/,/g, '')))
+    .filter(n => n > 0)
+    .map(n => n >= 1000 ? n / 1000 : n)
+    .filter(n => n >= 20);
+  if (nums.length) {
+    out.low = Math.min(...nums);
+    if (nums.length > 1) out.high = Math.max(...nums);
+  }
+  return Object.keys(out).length ? out : null;
+}
+function salaryTop(a) {
+  const s = a.salary;
+  if (s && (s.high || s.low)) return s.high || s.low;
+  const p = parseCompensation(a.compensation);
+  if (p && (p.high || p.low)) return p.high || p.low;
+  return 0;
+}
+function salaryText(sal) {
+  if (!sal) return '';
+  const bits = [];
+  if (sal.low && sal.high) bits.push('$' + sal.low + '\u2013' + sal.high + 'k');
+  else if (sal.low) bits.push('$' + sal.low + 'k');
+  else if (sal.high) bits.push('up to $' + sal.high + 'k');
+  if (sal.bonus) bits.push(sal.bonus === 'yes' ? 'bonus' : sal.bonus + ' bonus');
+  if (sal.equity) bits.push('equity');
+  if (sal.retirement) bits.push('401k');
+  return bits.join(' \u00b7 ');
+}
+
+/* ---------- Migration: older entries kept free text in address and compensation ---------- */
+function inferType(a) {
+  const t = ((a.activity || '') + ' ' + (a.detail || '')).toLowerCase();
+  if (/interview/.test(t)) return 'interview';
+  if (/recruiter/.test(t)) return 'recruiter';
+  if (/job board|searched online/.test(t)) return 'search';
+  if (/networking|professional connection|referral/.test(t)) return 'networking';
+  if (/applied/.test(t)) return 'applied';
+  return '';
+}
+function migrateActivity(a) {
+  const out = { ...a };
+  let wp = (out.location && out.location.workplace) || out.workplace || '';
+  let addr = (out.location && out.location.address) || out.address || '';
+  let city = (out.location && out.location.city) || out.city || '';
+  if (!wp) {
+    const t = addr.toLowerCase();
+    if (t.includes('remote')) wp = 'remote';
+    else if (t.includes('hybrid')) wp = 'hybrid';
+    else if (/on[- ]?site|in[- ]office/.test(t)) wp = 'onsite';
+    if (wp && /^(remote|hybrid|on[- ]?site)$/i.test(addr.trim())) addr = '';
+  }
+  delete out.workplace; delete out.address; delete out.city;
+  const l = locationFrom(wp, addr, city);
+  if (l) out.location = l; else delete out.location;
+  if (!out.salary && out.compensation) {
+    const parsed = parseCompensation(out.compensation);
+    if (parsed) out.salary = parsed;
+  }
+  if (!out.type) {
+    const t = inferType(out);
+    if (t) out.type = t;
+  }
+  return out;
+}
+
+function parseISO(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function toISO(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function weekStart(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - x.getDay()); return x; }
+function weekEnd(d) { const x = weekStart(d); x.setDate(x.getDate() + 6); return x; }
+function fmtLong(d) { return MON[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear(); }
+function fmtShort(d) { return MON_S[d.getMonth()] + ' ' + d.getDate(); }
+
+/* ---------- IndexedDB: persist the file handle across reloads ---------- */
+const IDB_NAME = 'twc-worksearch-db', IDB_STORE = 'handles';
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSet(key, val) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(val, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* ---------- File System Access: read/write the JSON data file ---------- */
+async function verifyPermission(handle, forWrite) {
+  const opts = forWrite ? { mode: 'readwrite' } : {};
+  if ((await handle.queryPermission(opts)) === 'granted') return true;
+  if ((await handle.requestPermission(opts)) === 'granted') return true;
+  return false;
+}
+async function readFromHandle() {
+  const file = await fileHandle.getFile();
+  const text = await file.text();
+  try {
+    state = normalizeState(JSON.parse(text));
+  } catch (e) {
+    state = { activities: [], deleted: [], rules: DEFAULT_RULES };
+  }
+}
+async function writeToHandle(payload) {
+  const writable = await fileHandle.createWritable();
+  await writable.write(JSON.stringify(payload || serializeState(), null, 2));
+  await writable.close();
+}
+
+async function chooseExistingFile() {
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      types: [{ description: 'JSON file', accept: { 'application/json': ['.json'] } }]
+    });
+    fileHandle = handle;
+    fileHandleVerified = true;
+    try { await idbSet('fileHandle', handle); } catch (e) {}
+    await readFromHandle();
+    render();
+    updateFileUI();
+    toast('Connected to ' + handle.name);
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('Could not open that file');
+  }
+}
+async function createNewDataFile() {
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: 'twc-worksearch-data.json',
+      types: [{ description: 'JSON file', accept: { 'application/json': ['.json'] } }]
+    });
+    fileHandle = handle;
+    fileHandleVerified = true;
+    try { await idbSet('fileHandle', handle); } catch (e) {}
+    await writeToHandle();
+    updateFileUI();
+    toast('Created ' + handle.name);
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('Could not create file');
+  }
+}
+async function reconnectFile() {
+  const ok = await verifyPermission(fileHandle, true);
+  if (ok) {
+    fileHandleVerified = true;
+    await readFromHandle();
+    render();
+    updateFileUI();
+    toast('Reconnected to ' + fileHandle.name);
+  } else {
+    toast('Permission denied');
+  }
+}
+function updateFileUI() {
+  const status = $('fileStatus');
+  const btn = $('connectBtn');
+  status.classList.remove('warn');
+  if (fileHandle && fileHandleVerified) {
+    status.textContent = 'Saving to ' + fileHandle.name;
+    btn.textContent = 'Change file';
+    btn.onclick = chooseExistingFile;
+  } else if (fileHandle && !fileHandleVerified) {
+    status.textContent = 'Click to reconnect ' + fileHandle.name + ' and resume saving.';
+    status.classList.add('warn');
+    btn.textContent = 'Reconnect file';
+    btn.onclick = reconnectFile;
+  } else {
+    status.textContent = 'No data file connected — changes are only saved in this browser.';
+    status.classList.add('warn');
+    btn.textContent = 'Open JSON file';
+    btn.onclick = chooseExistingFile;
+  }
+}
+
+/* ---------- Fallback (Safari/Firefox): manual import/export ---------- */
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(serializeState(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'twc-worksearch-data.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast('Downloaded twc-worksearch-data.json');
+}
+async function importJSON(file) {
+  const text = await file.text();
+  try {
+    state = normalizeState(JSON.parse(text));
+    localStorage.setItem(KEY, JSON.stringify(serializeState()));
+    buildCompanyOptions();
+    render();
+    toast('Imported ' + file.name);
+  } catch (e) {
+    toast('That file is not valid JSON');
+  }
+}
+
+function seed() {
+  state = { activities: [], deleted: [], rules: DEFAULT_RULES };
+}
+
+async function load() {
+  const cached = localStorage.getItem(KEY);
+  if (cached) {
+    try { state = normalizeState(JSON.parse(cached)); } catch (e) { seed(); }
+  } else {
+    seed();
+  }
+
+  if (FS_SUPPORTED) {
+    $('fsButtons').style.display = 'flex';
+    try {
+      const handle = await idbGet('fileHandle');
+      if (handle) {
+        fileHandle = handle;
+        const perm = await handle.queryPermission({ mode: 'readwrite' });
+        if (perm === 'granted') {
+          fileHandleVerified = true;
+          await readFromHandle();
+        }
+      }
+    } catch (e) { /* IndexedDB unavailable (e.g. some file:// contexts) — user can reconnect manually */ }
+  } else {
+    $('fallbackButtons').style.display = 'flex';
+  }
+  updateFileUI();
+}
+
+async function save() {
+  buildCompanyOptions();
+  const payload = serializeState();
+  localStorage.setItem(KEY, JSON.stringify(payload));
+  if (fileHandle && fileHandleVerified) {
+    try {
+      await writeToHandle(payload);
+    } catch (e) {
+      toast('Could not save to file: ' + e.message);
+    }
+  }
+}
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function forWeek(start) {
+  const s = toISO(start), e = toISO(weekEnd(start));
+  return state.activities.filter(a => a.date >= s && a.date <= e).sort((a,b) => a.date.localeCompare(b.date));
+}
+function allWeeks() {
+  const keys = new Set(state.activities.map(a => toISO(weekStart(parseISO(a.date)))));
+  return [...keys].sort();
+}
+const RESULT_LABEL = { application:'Application filed', other:'Other', nothiring:'Not hiring', hired:'Hired' };
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------- Keep the JSON free of blank fields ---------- */
+function compact(obj, alwaysKeep) {
+  const out = {};
+  for (const k of Object.keys(obj)) {
+    const v = obj[k];
+    if (alwaysKeep.includes(k) || (v !== '' && v != null)) out[k] = v;
+  }
+  return out;
+}
+function compactActivity(a) { return compact(a, ['id', 'date', 'result']); }
+function compactDeleted(a) { return compact(a, ['id', 'date', 'result', 'deletedAt']); }
+function normalizeState(parsed) {
+  return {
+    activities: (parsed.activities || []).map(a => compactActivity(migrateActivity(a))),
+    deleted: (parsed.deleted || []).map(compactDeleted),
+    rules: parsed.rules || DEFAULT_RULES
+  };
+}
+function serializeState() {
+  const out = {};
+  out.activities = state.activities.map(compactActivity);
+  out.deleted = (state.deleted || []).map(compactDeleted);
+  out.rules = state.rules || DEFAULT_RULES;
+  return out;
+}
+
+function matchesFilter(a) {
+  const f = filters;
+  if (f.status === 'active' && a.status === 'inactive') return false;
+  if (f.status === 'inactive' && a.status !== 'inactive') return false;
+  if (f.types.length && !f.types.includes(a.type || '')) return false;
+  if (f.workplaces.length && !f.workplaces.includes(loc(a).workplace)) return false;
+  if (f.companies.length && !f.companies.includes(a.company || '')) return false;
+  if (f.minStars > 0 && effectiveStars(a) < f.minStars) return false;
+  if (f.minSalary > 0 && salaryTop(a) < f.minSalary) return false;
+  if (f.city) {
+    const l = loc(a);
+    const hay = (l.city + ' ' + l.address).toLowerCase();
+    if (!hay.includes(f.city.toLowerCase())) return false;
+  }
+  return true;
+}
+function filterActive() {
+  const f = filters;
+  return !!(f.status || f.types.length || f.workplaces.length || f.companies.length || f.minStars > 0 || f.minSalary > 0 || f.city);
+}
+function resetFilters() {
+  filters = { status: '', types: [], workplaces: [], companies: [], minStars: 0, minSalary: 0, city: '' };
+}
+
+function rowHtml(a, showMonth) {
+  const d = parseISO(a.date);
+  const bits = [];
+  if (a.person) bits.push(esc(a.person));
+  if (a.email) bits.push(esc(a.email));
+  if (a.phone) bits.push(esc(a.phone));
+  const contact = bits.join(' &middot; ');
+  const displayUrl = a.url ? a.url.replace(/^https?:\/\//, '') : '';
+  const link = a.url ? '<div class="link"><a href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(displayUrl) + '</a></div>' : '';
+  const salTxt = salaryText(a.salary) || a.compensation || '';
+  const co = [
+    a.company ? '<strong>' + esc(a.company) + '</strong>' : '',
+    ...locationText(a).map(esc),
+    salTxt ? '<strong>' + esc(salTxt) + '</strong>' : ''
+  ].filter(Boolean).join(' &middot; ');
+  const typeTag = ACTIVITY_TYPES[a.type] ? '<span class="tag tag-neutral">' + esc(ACTIVITY_TYPES[a.type]) + '</span> ' : '';
+  const inactiveTag = a.status === 'inactive' ? '<span class="tag tag-inactive">Inactive</span>' : '';
+  return '<div class="row-hit">' +
+    '<div class="day"><div class="dow">' + DOW[d.getDay()] + '</div><div class="num">' + d.getDate() + '</div>' +
+      (showMonth ? '<div class="mon">' + MON_S[d.getMonth()] + ' ' + d.getFullYear() + '</div>' : '') + '</div>' +
+    '<div class="body">' +
+      '<div class="title">' + esc(a.title || 'Untitled role') + '</div>' +
+      '<div class="co">' + co + '</div>' +
+      (a.activity ? '<div class="act">' + esc(a.activity) + '</div>' : '') +
+      (contact ? '<div class="meta">' + contact + '</div>' : '') +
+      link +
+      '<div class="result">' + typeTag + '<span class="tag tag-neutral">' + RESULT_LABEL[a.result] + (a.detail ? ': ' + esc(a.detail) : '') + '</span></div>' +
+    '</div>' +
+    '<div class="side">' +
+      '<div class="tools">' +
+        '<button class="btn btn-ghost" onclick="editItem(\'' + a.id + '\')">Edit</button>' +
+        '<button class="btn btn-ghost danger" onclick="delItem(\'' + a.id + '\')">Delete</button>' +
+      '</div>' +
+      renderStars(effectiveStars(a)) + inactiveTag +
+    '</div>' +
+  '</div>';
+}
+
+function render() {
+  const filtering = filterActive();
+  renderChips();
+  syncFilterButton();
+  $('stepper').classList.toggle('off', filtering);
+  $('today').style.display = filtering ? 'none' : '';
+  $('weektally').style.display = filtering ? 'none' : '';
+
+  let items;
+  if (filtering) {
+    items = state.activities.filter(matchesFilter).sort((a, b) => b.date.localeCompare(a.date));
+    $('weeklabel').innerHTML = 'All weeks <span class="yr">&middot; ' + items.length +
+      (items.length === 1 ? ' result' : ' results') + '</span>';
+  } else {
+    const start = weekStart(anchor), end = weekEnd(start);
+    $('weeklabel').innerHTML = fmtShort(start) + ' &ndash; ' + fmtShort(end) + ' <span class="yr">' + end.getFullYear() + '</span>';
+    items = forWeek(start);
+    const n = items.length;
+    const tag = $('statusTag'), note = $('statusNote');
+    if (n >= 3) {
+      tag.className = 'tag tag-met'; tag.textContent = n + ' logged';
+      note.textContent = 'requirement met';
+    } else {
+      tag.className = 'tag tag-short'; tag.textContent = n + ' of 3';
+      note.textContent = (3 - n) + ' more required this week';
+    }
+  }
+
+  const box = $('entries');
+  if (!items.length) {
+    box.innerHTML = filtering
+      ? '<div class="empty"><p>Nothing matches these filters.</p><p>Loosen one of the chips above, or clear them all to go back to the week view.</p></div>'
+      : '<div class="empty"><p>Nothing logged this week.</p>' +
+        '<p>Use the add bar at the bottom of the screen — it stays put while you scroll.</p></div>';
+    return;
+  }
+  box.innerHTML = items.map(a => rowHtml(a, filtering)).join('');
+}
+
+/* ---------- Filter popover ---------- */
+function syncFilterButton() {
+  const on = filterActive();
+  const btn = $('filterBtn');
+  btn.classList.toggle('btn-primary', on);
+  btn.classList.toggle('btn-secondary', !on);
+  btn.textContent = 'Filter';
+}
+function renderChips() {
+  const box = $('filterchips');
+  const f = filters, chips = [];
+  const add = (label, clear) => chips.push({ label, clear });
+  if (f.status) add(f.status === 'active' ? 'Active only' : 'Inactive only', () => { filters.status = ''; });
+  f.types.forEach(t => add(ACTIVITY_TYPES[t] || 'Untyped', () => { filters.types = filters.types.filter(x => x !== t); }));
+  f.workplaces.forEach(w => add(WORKPLACE[w] || 'Workplace unspecified', () => { filters.workplaces = filters.workplaces.filter(x => x !== w); }));
+  f.companies.forEach(c => add(c || 'No company', () => { filters.companies = filters.companies.filter(x => x !== c); }));
+  if (f.minStars > 0) add(f.minStars.toFixed(1) + '\u2605 or more', () => { filters.minStars = 0; });
+  if (f.minSalary > 0) add('$' + f.minSalary + 'k or more', () => { filters.minSalary = 0; });
+  if (f.city) add('City: ' + f.city, () => { filters.city = ''; });
+  chipHandlers = chips.map(c => c.clear);
+  box.style.display = chips.length ? 'flex' : 'none';
+  box.innerHTML = chips.map((c, i) =>
+    '<span class="chip">' + esc(c.label) + '<button data-i="' + i + '" aria-label="Remove this filter">&times;</button></span>'
+  ).join('') + (chips.length ? '<button class="btn btn-ghost" id="clearAll">Clear all</button>' : '');
+  box.querySelectorAll('.chip button').forEach(b => {
+    b.onclick = () => { chipHandlers[Number(b.dataset.i)](); syncFilterUI(); render(); };
+  });
+  if (chips.length) $('clearAll').onclick = () => { resetFilters(); syncFilterUI(); render(); };
+}
+function buildCompanyOptions() {
+  const names = [...new Set(state.activities.map(a => a.company).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  const opt = (val, label) =>
+    '<label class="opt" data-group="companies" data-val="' + esc(val) + '">' + esc(label) + '</label>';
+  $('fCompanies').innerHTML = names.map(n => opt(n, n)).join('');
+  $('fCompanies').querySelectorAll('.opt').forEach(bindOpt);
+  syncFilterUI();
+}
+function bindOpt(el) {
+  el.onclick = e => {
+    e.preventDefault();
+    const g = el.dataset.group, v = el.dataset.val;
+    if (g === 'status') filters.status = v;
+    else filters[g] = filters[g].includes(v) ? filters[g].filter(x => x !== v) : [...filters[g], v];
+    syncFilterUI(); render();
+  };
+}
+function syncFilterUI() {
+  const n = filters.companies.length;
+  $('companySummary').textContent = n === 0 ? 'All companies'
+    : n === 1 ? filters.companies[0]
+    : n + ' companies selected';
+  $('companyToggle').classList.toggle('on', n > 0);
+  $('filterPop').querySelectorAll('.opt').forEach(el => {
+    const g = el.dataset.group, v = el.dataset.val;
+    const on = g === 'status' ? filters.status === v : filters[g].includes(v);
+    el.classList.toggle('on', on);
+  });
+  $('fStars').value = filters.minStars;
+  $('fStarsVal').textContent = filters.minStars ? filters.minStars.toFixed(1) + '\u2605+' : 'Any';
+  $('fSalary').value = filters.minSalary;
+  $('fSalaryVal').textContent = filters.minSalary ? '$' + filters.minSalary + 'k+' : 'Any';
+  if ($('fCity').value !== filters.city) $('fCity').value = filters.city;
+}
+(function buildFilterUI() {
+  const optHtml = (group, val, label) =>
+    '<label class="opt" data-group="' + group + '" data-val="' + val + '">' + esc(label) + '</label>';
+  $('fStatus').innerHTML = [['', 'All'], ['active', 'Active'], ['inactive', 'Inactive']]
+    .map(([k, v]) => optHtml('status', k, v)).join('');
+  $('fTypes').innerHTML = Object.keys(ACTIVITY_TYPES).map(k => optHtml('types', k, ACTIVITY_TYPES[k])).join('') +
+    optHtml('types', '', 'Untyped');
+  $('fPlaces').innerHTML = Object.keys(WORKPLACE).map(k => optHtml('workplaces', k, WORKPLACE[k])).join('') +
+    optHtml('workplaces', '', 'Unspecified');
+  $('filterPop').querySelectorAll('.opt').forEach(bindOpt);
+  $('fStars').oninput = e => { filters.minStars = parseFloat(e.target.value) || 0; syncFilterUI(); render(); };
+  $('fSalary').oninput = e => { filters.minSalary = parseInt(e.target.value, 10) || 0; syncFilterUI(); render(); };
+  $('fCity').oninput = e => { filters.city = e.target.value.trim(); render(); };
+  $('companyToggle').onclick = () => {
+    const open = $('companyBody').classList.toggle('open');
+    $('companyToggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) $('fCompanySearch').focus();
+    placePop();
+  };
+  $('fCompanySearch').oninput = e => {
+    const q = e.target.value.trim().toLowerCase();
+    $('fCompanies').querySelectorAll('.opt').forEach(el => {
+      const hit = !q || el.dataset.val.toLowerCase().includes(q);
+      el.style.display = hit || el.classList.contains('on') ? '' : 'none';
+    });
+    placePop();
+  };
+  function placePop() {
+    const pop = $('filterPop');
+    if (!pop.classList.contains('open')) return;
+    const r = $('filterBtn').getBoundingClientRect();
+    const w = pop.offsetWidth, h = pop.offsetHeight, pad = 12;
+    let left = r.right - w;
+    left = Math.min(Math.max(pad, left), window.innerWidth - w - pad);
+    let top = r.bottom + 10;
+    if (top + h > window.innerHeight - pad) top = Math.max(pad, r.top - h - 10);
+    if (top + h > window.innerHeight - pad) top = Math.max(pad, window.innerHeight - h - pad);
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+  }
+  $('filterBtn').onclick = e => {
+    e.stopPropagation();
+    const pop = $('filterPop');
+    pop.classList.toggle('open');
+    placePop();
+  };
+  window.addEventListener('resize', placePop);
+  window.addEventListener('scroll', placePop, true);
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.filterwrap')) $('filterPop').classList.remove('open');
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') $('filterPop').classList.remove('open');
+  });
+  syncFilterUI();
+})();
+
+function setExtraOpen(open) {
+  $('extraFields').style.display = open ? 'grid' : 'none';
+  $('extraToggle').textContent = open ? 'Hide extra fields' : 'City, email, phone, result, status, result detail, star rating inputs';
+}
+
+function salaryFromForm() {
+  const sal = {};
+  const lo = parseFloat($('f-sal-low').value), hi = parseFloat($('f-sal-high').value);
+  if (!isNaN(lo) && lo > 0) sal.low = lo;
+  if (!isNaN(hi) && hi > 0) sal.high = hi;
+  const bonus = $('f-bonus').value.trim();
+  if (bonus) sal.bonus = bonus;
+  if ($('f-equity').checked) sal.equity = true;
+  if ($('f-retirement').checked) sal.retirement = true;
+  return Object.keys(sal).length ? sal : null;
+}
+function formSnapshot() {
+  return {
+    location: locationFrom($('f-workplace').value, $('f-address').value, $('f-city').value),
+    salary: salaryFromForm(),
+    compensation: $('f-compensation').value,
+    person: $('f-person').value,
+    activity: $('f-activity').value,
+    detail: $('f-detail').value,
+    result: $('f-result').value,
+    techMatch: $('f-techmatch').value,
+    missionFit: $('f-missionfit').value,
+    status: $('f-status').value
+  };
+}
+function starsFormulaTooltip() {
+  const r = getRules();
+  return 'Leave blank to auto-calculate: Location (remote=' + r.location.remote + '★, hybrid=' + r.location.hybrid + '★, on-site=' + r.location.onsite + '★)' +
+    ' + Salary (matches $' + r.minSalaryK + 'k+=' + r.salary.match + '★, unknown=' + r.salary.unknown + '★, lower=' + r.salary.lower + '★)' +
+    ' + Tech stack match (high=' + r.stack.high + '★, medium=' + r.stack.medium + '★, low=' + r.stack.low + '★)' +
+    ' + Mission/industry fit (good=' + r.mission.good + '★, neutral=' + r.mission.neutral + '★, poor=' + r.mission.poor + '★)' +
+    ' + Human interaction (yes=' + r.interaction.yes + '★, no=' + r.interaction.no + '★).' +
+    ' Type a number to override. Inactive activities are always 0★.';
+}
+function updateStarsPreview() {
+  $('f-stars').placeholder = calcStars(formSnapshot()).toFixed(1);
+  $('starsLabel').title = starsFormulaTooltip();
+}
+
+function openPanel(item, tpl) {
+  editingId = item ? item.id : null;
+  const t = tpl ? TEMPLATES[tpl] : null;
+  $('panelTitle').textContent = item ? 'Edit activity' : (t ? t.label : 'New activity');
+  $('f-date').value   = item ? (item.date || '') : toISO(new Date());
+  $('f-activity').value = item ? (item.activity || '') : (t ? t.activity : '');
+  $('f-title').value  = item ? (item.title || '') : '';
+  $('f-company').value= item ? (item.company || '') : (t && t.company ? t.company : '');
+  $('f-compensation').value = item ? (item.compensation || '') : '';
+  $('f-url').value    = item ? (item.url || '') : '';
+  const il = item ? loc(item) : {};
+  $('f-address').value= item ? (il.address || '') : (t && t.address ? t.address : '');
+  $('f-workplace').value = item ? (il.workplace || '') : (t && t.workplace ? t.workplace : 'remote');
+  const sal = (item && item.salary) ? item.salary : {};
+  $('f-sal-low').value = sal.low || '';
+  $('f-sal-high').value = sal.high || '';
+  $('f-bonus').value = sal.bonus || '';
+  $('f-equity').checked = !!sal.equity;
+  $('f-retirement').checked = !!sal.retirement;
+  $('f-type').value = item ? (item.type || '') : (tpl || '');
+  $('f-city').value   = item ? (il.city || '') : '';
+  $('f-person').value = item ? (item.person || '') : '';
+  $('f-email').value  = item ? (item.email || '') : '';
+  $('f-phone').value  = item ? (item.phone || '') : '';
+  $('f-result').value = item ? (item.result || 'application') : (t ? t.result : 'application');
+  $('f-detail').value = item ? (item.detail || '') : (t ? t.detail : '');
+  $('f-notes').value  = item ? (item.notes || '') : (t && t.notes ? t.notes : '');
+  $('f-status').value = item ? (item.status || '') : (t && t.status ? t.status : '');
+  $('f-techmatch').value = item ? (item.techMatch || '') : '';
+  $('f-missionfit').value = item ? (item.missionFit || '') : '';
+  $('f-stars').value  = item && typeof item.stars === 'number' ? item.stars : '';
+  setExtraOpen(!!((item && (item.city || item.address || item.email || item.phone || item.detail || item.techMatch || item.missionFit ||
+    item.status === 'inactive' || (item.result && item.result !== 'application'))) || (t && t.status === 'inactive')));
+  syncPanelChecks();
+  updateStarsPreview();
+  $('panelBackdrop').style.display = 'grid';
+  $('f-title').focus();
+}
+function closePanel() { $('panelBackdrop').style.display = 'none'; editingId = null; }
+
+['f-address','f-city','f-workplace','f-sal-low','f-sal-high','f-bonus','f-compensation','f-person','f-activity','f-detail','f-result','f-techmatch','f-missionfit','f-status'].forEach(id => {
+  $(id).addEventListener('input', updateStarsPreview);
+  $(id).addEventListener('change', updateStarsPreview);
+});
+
+/* Pill-style checkboxes in the panel */
+function syncPanelChecks() {
+  document.querySelectorAll('.opt[data-chk]').forEach(el => {
+    el.classList.toggle('on', $(el.dataset.chk).checked);
+  });
+}
+document.querySelectorAll('.opt[data-chk]').forEach(el => {
+  el.onclick = e => {
+    e.preventDefault();
+    const box = $(el.dataset.chk);
+    box.checked = !box.checked;
+    syncPanelChecks();
+    updateStarsPreview();
+  };
+});
+
+window.editItem = id => { const it = state.activities.find(a => a.id === id); if (it) openPanel(it); };
+
+let pendingDeleteId = null;
+window.delItem = id => {
+  const item = state.activities.find(a => a.id === id);
+  if (!item) return;
+  pendingDeleteId = id;
+  $('confirmText').textContent = (item.title || 'This activity') + (item.company ? ' at ' + item.company : '') +
+    ' will be moved to the deleted log in the JSON file, out of the app\'s view.';
+  $('confirmBackdrop').style.display = 'grid';
+};
+function closeConfirm() { $('confirmBackdrop').style.display = 'none'; pendingDeleteId = null; }
+$('confirmCancelBtn').onclick = closeConfirm;
+$('confirmClose').onclick = closeConfirm;
+$('confirmBackdrop').addEventListener('keydown', e => { if (e.key === 'Escape') closeConfirm(); });
+$('confirmDeleteBtn').onclick = async () => {
+  const id = pendingDeleteId;
+  closeConfirm();
+  const item = state.activities.find(a => a.id === id);
+  if (!item) return;
+  state.activities = state.activities.filter(a => a.id !== id);
+  state.deleted = [...(state.deleted || []), { ...item, deletedAt: new Date().toISOString() }];
+  await save(); render(); toast('Activity deleted');
+};
+
+document.querySelectorAll('.addbar-card .btn-secondary[data-t]').forEach(c => {
+  c.onclick = () => openPanel(null, c.dataset.t);
+});
+$('addBtn').onclick = () => openPanel(null, null);
+$('extraToggle').onclick = () => setExtraOpen($('extraFields').style.display === 'none');
+
+async function doSave() {
+  const date = $('f-date').value;
+  if (!date) { toast('Pick a date first'); $('f-date').focus(); return; }
+  const status = $('f-status').value;
+  const salary = salaryFromForm();
+  const draft = {
+    date,
+    activity: $('f-activity').value.trim(),
+    title: $('f-title').value.trim(),
+    company: $('f-company').value.trim(),
+    type: $('f-type').value,
+    location: locationFrom($('f-workplace').value, $('f-address').value.trim(), $('f-city').value.trim()) || '',
+    salary: salary || '',
+    compensation: $('f-compensation').value.trim(),
+    url: $('f-url').value.trim(),
+    person: $('f-person').value.trim(),
+    email: $('f-email').value.trim(),
+    phone: $('f-phone').value.trim(),
+    result: $('f-result').value,
+    detail: $('f-detail').value.trim(),
+    notes: $('f-notes').value.trim(),
+    techMatch: $('f-techmatch').value,
+    missionFit: $('f-missionfit').value,
+    status
+  };
+  const starsInput = $('f-stars').value.trim();
+  const stars = status === 'inactive'
+    ? 0
+    : (starsInput === '' ? calcStars(draft) : Math.max(0, Math.min(5, parseFloat(starsInput))));
+  const rec = compactActivity({ id: editingId || 'a-' + Date.now(), ...draft, stars });
+  if (editingId) state.activities = state.activities.map(a => a.id === editingId ? rec : a);
+  else state.activities.push(rec);
+  anchor = parseISO(date);
+  await save(); closePanel(); render(); toast('Activity saved');
+}
+$('saveBtn').onclick = doSave;
+
+$('cancelBtn').onclick = closePanel;
+$('panelClose').onclick = closePanel;
+$('panelBackdrop').addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePanel();
+  else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') doSave();
+});
+
+$('prev').onclick = () => { anchor = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - 7); render(); };
+$('next').onclick = () => { anchor = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + 7); render(); };
+$('today').onclick = () => { anchor = new Date(); render(); };
+
+$('newFileBtn').onclick = createNewDataFile;
+$('importBtn').onclick = () => $('importFile').click();
+$('exportBtn').onclick = exportJSON;
+$('importFile').onchange = e => {
+  const file = e.target.files[0];
+  if (file) importJSON(file);
+  e.target.value = '';
+};
+
+function checkbox(on) { return '<span class="box">' + (on ? '&#10005;' : '') + '</span>'; }
+function line(label, val, dotted, cls) {
+  return '<div class="cell-line"><span class="lbl">' + label + '</span> ' +
+    '<span class="val ' + (cls || '') + '">' + (val ? esc(val) : (dotted ? '<span class="dotted"></span>' : '')) + '</span></div>';
+}
+
+function buildSheet(items, startISO, pageNum, totalPages, weekTotal) {
+  const start = parseISO(startISO), end = weekEnd(start);
+  const rows = items.slice(0, 5);
+  while (rows.length < 5) rows.push(null);
+  const pageLabel = totalPages > 1 ? ' <span style="font-size:7pt">(page ' + pageNum + ' of ' + totalPages + ')</span>' : '';
+
+  let html = '<div class="sheet">';
+  html += '<div class="form-title">The Texas Workforce Commission Work Search Activity Log</div>';
+  html += '<table class="form-head"><tr>' +
+    '<td>Name: <span class="fill wide"></span></td>' +
+    '<td style="text-align:right">Week of: <span class="fill sm">' + fmtLong(start) + '</span> to <span class="fill sm">' + fmtLong(end) + '</span>' + pageLabel + '</td>' +
+    '</tr><tr>' +
+    '<td>Social Security #: <span class="fill"></span></td>' +
+    '<td style="text-align:right">Number of Required searches: <span class="fill sm">' + weekTotal + '</span></td>' +
+    '</tr></table>';
+  html += '<div class="advisory">If you are still unemployed after eight weeks of benefits, you should reduce your salary requirement and look at more job openings. ' +
+    'Make as many copies of this as you need, or print copies at www.twc.state.tx.us/ui/bnfts/worksearchlog.html.</div>';
+
+  html += '<table class="log"><colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup><thead><tr>' +
+    '<th>Date, Description of Work Search<span class="ex">(Ex: Applied for job, submitted resume, attended job fair, interviewed, used Workforce Center, searched online)</span></th>' +
+    '<th>Name, Location and Telephone Number of Employer/Service/Agency<span class="ex">(For address, use street or internet address)</span></th>' +
+    '<th>Contact Information<span class="ex">Complete all that apply.</span></th>' +
+    '<th>Results</th></tr></thead><tbody>';
+
+  rows.forEach(a => {
+    html += '<tr>';
+    if (!a) {
+      html += '<td>' + line('Date of Activity','',true) + line('Work Search Activity','',true) + line('Type of Job','',true) + '</td>';
+      html += '<td>' + line('Name','',true) + line('Address','',true) + line('City, State, Zip','',true) + line('Phone','',true) + '</td>';
+      html += '<td>' + line('Person Contacted','',true) + line('E-Mail','',true) + line('Fax #','',true) + '</td>';
+      html += '<td><div class="res-opt">' + checkbox(false) + 'Hired</div>' +
+        '<div class="res-opt">' + checkbox(false) + 'Application filed</div>' +
+        '<div class="res-opt">' + checkbox(false) + 'Not hiring</div>' +
+        '<div class="res-opt">' + checkbox(false) + 'Other</div></td>';
+    } else {
+      const d = parseISO(a.date);
+      html += '<td>' + line('Date of Activity', fmtLong(d)) + line('Work Search Activity', a.activity) + line('Type of Job', a.title) +
+        ((salaryText(a.salary) || a.compensation) ? line('Compensation', salaryText(a.salary) || a.compensation) : '') + '</td>';
+      const pl = loc(a);
+      html += '<td>' + line('Name', a.company) + line('Address', pl.address || WORKPLACE[pl.workplace] || '') +
+        (a.url ? line('Internet Address', a.url, false, 'url') : '') +
+        (pl.city ? line('City, State, Zip', pl.city) : '') +
+        (a.phone ? line('Phone', a.phone) : '') + '</td>';
+      html += '<td>' + line('Person Contacted', a.person) + line('E-Mail', a.email) + line('Fax #', '') + '</td>';
+      html += '<td>' +
+        '<div class="res-opt">' + checkbox(a.result === 'hired') + 'Hired' +
+          (a.result === 'hired' && a.detail ? '<br><span style="font-size:7pt">Start date: ' + esc(a.detail) + '</span>' : '') + '</div>' +
+        '<div class="res-opt">' + checkbox(a.result === 'application') + 'Application filed</div>' +
+        '<div class="res-opt">' + checkbox(a.result === 'nothiring') + 'Not hiring</div>' +
+        '<div class="res-opt">' + checkbox(a.result === 'other') + 'Other' +
+          (a.result === 'other' && a.detail ? '<br><span style="font-size:7pt">' + esc(a.detail) + '</span>' : '') + '</div></td>';
+    }
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  html += '<div class="form-foot">An individual may receive and review information that TWC collects regarding that individual by sending an e-mail to open.records@twc.state.tx.us or writing to TWC Open Records Unit, 101 E. 15th St. Room 266, Austin TX 78778-0001. ' +
+    '<strong>Keep this form for your records. Submit a copy to TWC only if requested using our online UI Submission Portal at https://twc.texas.gov/uidocs or the address or fax number we gave you.</strong></div>';
+  html += '<div class="form-no">BN90DE (10-20-20)</div></div>';
+  return html;
+}
+
+function buildWeekPages(startISO) {
+  const items = forWeek(parseISO(startISO));
+  const chunks = [];
+  for (let i = 0; i < items.length; i += 5) chunks.push(items.slice(i, i + 5));
+  if (!chunks.length) chunks.push([]);
+  return chunks.map((chunk, i) => buildSheet(chunk, startISO, i + 1, chunks.length, items.length));
+}
+
+function doPrint(scope) {
+  const weeks = scope === 'all' ? allWeeks() : [toISO(weekStart(anchor))];
+  if (!weeks.length) { toast('Nothing to print yet'); return; }
+  $('printout').innerHTML = weeks.flatMap(buildWeekPages).join('');
+  setTimeout(() => window.print(), 60);
+}
+$('printBtn').onclick = () => doPrint('week');
+$('printAllBtn').onclick = () => doPrint('all');
+
+const BULK_REASONS = Object.freeze({ rejected: 'Rejected', withdrawn: 'Withdrawn', closed: 'Position closed', noresponse: 'No response' });
+function fmtStamp(d) {
+  return MON_S[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() + ', ' +
+    d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+function bulkNoteLine() {
+  const r = BULK_REASONS[$('b-reason').value] || 'Marked inactive';
+  return r + ' \u2014 ' + fmtStamp(new Date());
+}
+function appendNote(existing, line) {
+  const cur = (existing || '').trim();
+  if (!line) return cur;
+  const label = line.split(' \u2014 ')[0];
+  if (cur.split('\n').some(l => l.trim().startsWith(label + ' \u2014 '))) return cur;
+  return cur ? cur + '\n' + line : line;
+}
+/* ---------- Bulk: mark a company's activities inactive ---------- */
+function distinct(list) { return [...new Set(list.filter(Boolean))].sort((a, b) => a.localeCompare(b)); }
+function activeActivities() { return state.activities.filter(a => a.status !== 'inactive'); }
+function bulkSelection() {
+  return { company: $('b-company').value, title: $('b-title').value, url: $('b-url').value };
+}
+function bulkMatches() {
+  const s = bulkSelection();
+  if (!s.company) return [];
+  return state.activities.filter(a =>
+    a.company === s.company &&
+    (!s.title || a.title === s.title) &&
+    (!s.url || a.url === s.url));
+}
+function fillSelect(id, values, anyLabel) {
+  const el = $(id);
+  el.innerHTML = '<option value="">' + anyLabel + '</option>' +
+    values.map(v => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('');
+}
+function refreshBulk(resetChildren) {
+  const company = $('b-company').value;
+  const scoped = activeActivities().filter(a => a.company === company);
+  if (resetChildren) {
+    fillSelect('b-title', distinct(scoped.map(a => a.title)), 'All job titles');
+    fillSelect('b-url', distinct(scoped.map(a => a.url)), 'Any posting link');
+  } else {
+    const title = $('b-title').value;
+    const urlScope = title ? scoped.filter(a => a.title === title) : scoped;
+    const keep = $('b-url').value;
+    fillSelect('b-url', distinct(urlScope.map(a => a.url)), 'Any posting link');
+    if ([...$('b-url').options].some(o => o.value === keep)) $('b-url').value = keep;
+  }
+  $('b-title').disabled = !company;
+  $('b-url').disabled = !company;
+
+  const matches = bulkMatches();
+  const changing = matches.filter(a => a.status !== 'inactive').length;
+  const note = $('bulkCount');
+  const line = bulkNoteLine();
+  const suffix = ' Their notes get the line “' + line + '”.';
+  if (!company) note.textContent = 'Pick a company to see what would change.';
+  else if (!changing) note.textContent = 'No active activities match that selection.';
+  else note.textContent = changing + (changing === 1 ? ' activity will be marked inactive.' : ' activities will be marked inactive.') + suffix;
+  $('bulkApplyBtn').disabled = !changing;
+  $('bulkApplyBtn').style.opacity = changing ? '' : '.45';
+}
+function openBulk() {
+  fillSelect('b-company', distinct(activeActivities().map(a => a.company)), 'Choose a company\u2026');
+  $('b-title').innerHTML = '<option value="">All job titles</option>';
+  $('b-url').innerHTML = '<option value="">Any posting link</option>';
+  refreshBulk(true);
+  $('bulkBackdrop').style.display = 'grid';
+  $('b-company').focus();
+}
+function closeBulk() { $('bulkBackdrop').style.display = 'none'; }
+$('bulkInactiveBtn').onclick = openBulk;
+$('bulkClose').onclick = closeBulk;
+$('bulkCancelBtn').onclick = closeBulk;
+$('bulkBackdrop').addEventListener('keydown', e => { if (e.key === 'Escape') closeBulk(); });
+$('b-company').onchange = () => refreshBulk(true);
+$('b-title').onchange = () => refreshBulk(false);
+$('b-url').onchange = () => refreshBulk(false);
+$('b-reason').onchange = () => refreshBulk(false);
+$('bulkApplyBtn').onclick = async () => {
+  const ids = new Set(bulkMatches().filter(a => a.status !== 'inactive').map(a => a.id));
+  if (!ids.size) return;
+  const line = bulkNoteLine();
+  state.activities = state.activities.map(a =>
+    ids.has(a.id) ? compactActivity({ ...a, status: 'inactive', stars: 0, notes: appendNote(a.notes, line) }) : a);
+  await save(); closeBulk(); render();
+  toast('Marked ' + ids.size + (ids.size === 1 ? ' activity inactive' : ' activities inactive'));
+};
+
+$('recalcBtn').onclick = async () => {
+  state.activities = state.activities.map(a => ({ ...a, stars: calcStars(a) }));
+  await save(); render(); toast('Recalculated stars for ' + state.activities.length + ' activities');
+};
+
+(async () => {
+  await load();
+  buildCompanyOptions();
+  render();
+})();
+</script>
+</body>
+</html>

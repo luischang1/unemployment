@@ -1,0 +1,72 @@
+{
+  "activities": [
+    {
+      "id": "seed-1",
+      "date": "2026-08-17",
+      "activity": "Phone call with recruiter to discuss the role, my background, and next steps in the hiring process.",
+      "title": "Senior Software Engineer, Fullstack",
+      "company": "Brigit",
+      "type": "recruiter",
+      "location": {
+        "workplace": "remote"
+      },
+      "url": "https://jobs.ashbyhq.com/brigit/dadfe50a-a234-481c-b284-3050d135d8ae",
+      "person": "Kris Heron",
+      "email": "krisheron@hellobrigit.com",
+      "phone": "415-964-3504",
+      "result": "other",
+      "detail": "Recruiter screening call. Notes being passed to the engineering team.",
+      "notes": "Rejected — Aug 31, 2026, 9:20 AM",
+      "techMatch": "high",
+      "missionFit": "good",
+      "status": "inactive",
+      "stars": 0
+    },
+    {
+      "id": "a-1788187447810",
+      "date": "2026-08-31",
+      "activity": "Searched online job boards for open Principal and Staff Software Engineer positions, reviewed listings, and evaluated openings against my background.",
+      "title": "Lead Software Engineer",
+      "company": "WorkInTexas",
+      "type": "search",
+      "url": "https://workintexas.com/vosnet/jobbanks/joblist.aspx?enc=qS7pUng7BCekiVZV9k0lmDLqtuVOwin6pGJU4eGubcfcEf+I12lGTAjBu1DZ6lATqYdZvxCpn+bChQZDC6yYgw9lROYk/b26o9OBZxwLlaTEoLFEcnncZ57IydCQt6+b",
+      "result": "other",
+      "detail": "Identified roles matching my background for follow-up.",
+      "notes": "Job board search log, not an actual application — excluded from star ranking.",
+      "status": "inactive",
+      "stars": 0,
+      "location": {
+        "address": "linkedin.com/jobs"
+      }
+    }
+  ],
+  "deleted": [],
+  "rules": {
+    "location": {
+      "remote": 1,
+      "hybrid": 0.5,
+      "onsite": 0
+    },
+    "salary": {
+      "match": 1,
+      "unknown": 0.5,
+      "lower": 0
+    },
+    "stack": {
+      "high": 1,
+      "medium": 0.5,
+      "low": 0
+    },
+    "mission": {
+      "good": 1,
+      "neutral": 0.5,
+      "poor": 0
+    },
+    "interaction": {
+      "yes": 1,
+      "no": 0
+    },
+    "minSalaryK": 180,
+    "notes": "Star rating (0-5, half-star steps) = location + salary + stack + mission + interaction. Location: remote=1, hybrid=0.5, on-site=0 (inferred from the Location field). Salary: matches target (>= minSalaryK)=1, unknown/not listed=0.5, below target=0 (inferred from the salary.high field). Tech stack match: 75%+=1, 35-75%=0.5, under 35%=0 (set manually, per activity). Company mission / industry fit: good or liked industry=1, neutral company=0.5, mission I do not support (e.g. surveillance, weapons, war contractors)=0 (set manually, per activity). Human interaction: any recruiter/hiring-manager call, interview, or networking referral=1, online application only with no contact yet=0 (inferred from Person contacted, Result, and the activity/result-detail text). Inactive activities are always 0 stars regardless of the above."
+  }
+}
