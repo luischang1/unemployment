@@ -842,7 +842,8 @@ const TEMPLATES = {
     activity:'Interviewed for the position with the hiring team.', detail:'Interview completed. Awaiting next steps.' },
   search: { label:'Job board search', result:'other',
     activity:'Searched online job boards for open Principal and Staff Software Engineer positions, reviewed listings, and evaluated openings against my background.',
-    company:'LinkedIn Jobs', address:'linkedin.com/jobs', detail:'Identified roles matching my background for follow-up.',
+    title:'Lead Software Engineer', company:'WorkInTexas', url:'https://www.workintexas.com',
+    address:'https://www.workintexas.com', city:'Austin, TX', workplace:'', detail:'Identified roles matching my background for follow-up.',
     status:'inactive', notes:'Job board search log, not an actual application — excluded from star ranking.' },
   networking: { label:'Networking', result:'other',
     activity:'Contacted a professional connection to discuss openings and request a referral.', detail:'' },
@@ -1460,13 +1461,13 @@ function openPanel(item, tpl) {
   $('panelTitle').textContent = item ? 'Edit activity' : (t ? t.label : 'New activity');
   $('f-date').value   = item ? (item.date || '') : toISO(new Date());
   $('f-activity').value = item ? (item.activity || '') : (t ? t.activity : '');
-  $('f-title').value  = item ? (item.title || '') : '';
+  $('f-title').value  = item ? (item.title || '') : (t && t.title ? t.title : '');
   $('f-company').value= item ? (item.company || '') : (t && t.company ? t.company : '');
   $('f-compensation').value = item ? (item.compensation || '') : '';
-  $('f-url').value    = item ? (item.url || '') : '';
+  $('f-url').value    = item ? (item.url || '') : (t && t.url ? t.url : '');
   const il = item ? loc(item) : {};
   $('f-address').value= item ? (il.address || '') : (t && t.address ? t.address : '');
-  $('f-workplace').value = item ? (il.workplace || '') : (t && t.workplace ? t.workplace : 'remote');
+  $('f-workplace').value = item ? (il.workplace || '') : (t && 'workplace' in t ? t.workplace : 'remote');
   const sal = (item && item.salary) ? item.salary : {};
   $('f-sal-low').value = sal.low || '';
   $('f-sal-high').value = sal.high || '';
@@ -1474,7 +1475,7 @@ function openPanel(item, tpl) {
   $('f-equity').checked = !!sal.equity;
   $('f-retirement').checked = !!sal.retirement;
   $('f-type').value = item ? (item.type || '') : (tpl || '');
-  $('f-city').value   = item ? (il.city || '') : '';
+  $('f-city').value   = item ? (il.city || '') : (t && t.city ? t.city : '');
   $('f-person').value = item ? (item.person || '') : '';
   $('f-email').value  = item ? (item.email || '') : '';
   $('f-phone').value  = item ? (item.phone || '') : '';
