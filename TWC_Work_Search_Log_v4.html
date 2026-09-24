@@ -104,6 +104,12 @@
   .resources .rlinks { display: flex; flex-wrap: wrap; gap: 14px; font-size: 14px; }
   .resources a { color: var(--accent); text-decoration: underline; }
   .resources a:hover { color: var(--accent-700); }
+  .resources a[target="_blank"]::after {
+    content: ""; display: inline-block; width: .8em; height: .8em; margin-left: .3em; vertical-align: -.05em;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpath d='M15 3h6v6'/%3E%3Cpath d='M10 14 21 3'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpath d='M15 3h6v6'/%3E%3Cpath d='M10 14 21 3'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
 
   .theme-toggle { display: flex; gap: 4px; margin-top: 4px; }
   .theme-toggle button {
@@ -289,11 +295,7 @@
     background: var(--neutral-100); box-shadow: var(--shadow-lg); border-radius: var(--radius-lg);
     padding: 12px 16px;
   }
-  .addbar-card .qlabel {
-    font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
-    color: color-mix(in srgb, var(--ink) 45%, transparent); margin-left: 6px;
-  }
-  .addbar-card .btn-secondary { font-size: 13.5px; padding: 7px 13px; }
+  .addbar-card select.input { width: auto; min-width: 170px; font-size: 14px; }
 
   /* ---------- dialog / panel ---------- */
   .dialog-backdrop {
@@ -512,14 +514,15 @@
 <div class="addbar">
   <div class="addbar-inner">
     <div class="addbar-card">
+      <select class="input" id="addType" aria-label="Activity type">
+        <option value="applied" selected>Applied online</option>
+        <option value="search">Job search</option>
+        <option value="recruiter">Recruiter call</option>
+        <option value="interview">Interview</option>
+        <option value="networking">Networking</option>
+        <option value="training">Training</option>
+      </select>
       <button class="btn btn-primary" id="addBtn">Add activity</button>
-      <span class="qlabel">Quick</span>
-      <button class="btn btn-secondary" data-t="applied">Applied online</button>
-      <button class="btn btn-secondary" data-t="recruiter">Recruiter call</button>
-      <button class="btn btn-secondary" data-t="interview">Interview</button>
-      <button class="btn btn-secondary" data-t="search">Job search</button>
-      <button class="btn btn-secondary" data-t="networking">Networking</button>
-      <button class="btn btn-secondary" data-t="training">Training</button>
     </div>
   </div>
 </div>
@@ -1541,10 +1544,7 @@ $('confirmDeleteBtn').onclick = async () => {
   await save(); render(); toast('Activity deleted');
 };
 
-document.querySelectorAll('.addbar-card .btn-secondary[data-t]').forEach(c => {
-  c.onclick = () => openPanel(null, c.dataset.t);
-});
-$('addBtn').onclick = () => openPanel(null, null);
+$('addBtn').onclick = () => openPanel(null, $('addType').value);
 $('extraToggle').onclick = () => setExtraOpen($('extraFields').style.display === 'none');
 
 async function doSave() {
