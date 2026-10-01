@@ -542,6 +542,12 @@
     </div>
 
     <div class="grid6">
+      <div class="field span6" id="linkAppField">
+        <label for="f-linkapp">Existing application &mdash; fills in job title, employer, and other details below</label>
+        <select id="f-linkapp" class="input">
+          <option value="">Type new details below&hellip;</option>
+        </select>
+      </div>
       <div class="field span2">
         <label for="f-date">Date</label>
         <input id="f-date" class="input" type="date">
@@ -1376,6 +1382,54 @@ function buildCompanyOptions() {
   $('fCompanies').querySelectorAll('.opt').forEach(bindOpt);
   syncFilterUI();
 }
+
+/* ---------- Link-to-existing-application picker: reuse an application's unique fields ---------- */
+let linkAppChoices = [];
+function applicationOptions() {
+  const map = new Map();
+  state.activities.forEach(a => {
+    const company = (a.company || '').trim();
+    if (!company) return;
+    const title = (a.title || '').trim();
+    const key = company.toLowerCase() + '\u0001' + title.toLowerCase();
+    const cur = map.get(key);
+    if (!cur || a.date > cur.date) map.set(key, a);
+  });
+  return [...map.values()].sort((a, b) =>
+    a.company.localeCompare(b.company) || (a.title || '').localeCompare(b.title || ''));
+}
+function buildLinkAppOptions() {
+  linkAppChoices = applicationOptions();
+  const opts = linkAppChoices.map((a, i) => {
+    const label = a.title ? (a.company + ' — ' + a.title) : a.company;
+    return '<option value="' + i + '">' + esc(label) + '</option>';
+  }).join('');
+  $('f-linkapp').innerHTML = '<option value="">Type new details below&hellip;</option>' + opts;
+}
+$('f-linkapp').onchange = e => {
+  const idx = e.target.value;
+  if (idx === '') return;
+  const a = linkAppChoices[Number(idx)];
+  if (!a) return;
+  $('f-title').value = a.title || '';
+  $('f-company').value = a.company || '';
+  $('f-url').value = a.url || '';
+  const l = loc(a);
+  $('f-workplace').value = l.workplace || '';
+  $('f-address').value = l.address || '';
+  $('f-city').value = l.city || '';
+  const sal = a.salary || {};
+  $('f-sal-low').value = sal.low || '';
+  $('f-sal-high').value = sal.high || '';
+  $('f-bonus').value = sal.bonus || '';
+  $('f-equity').checked = !!sal.equity;
+  $('f-retirement').checked = !!sal.retirement;
+  $('f-email').value = a.email || '';
+  $('f-phone').value = a.phone || '';
+  syncPanelChecks();
+  updateStarsPreview();
+  if (l.city || l.address || a.email || a.phone) setExtraOpen(true);
+};
 function bindOpt(el) {
   el.onclick = e => {
     e.preventDefault();
@@ -1507,6 +1561,9 @@ function openPanel(item, tpl) {
   editingId = item ? item.id : null;
   const t = tpl ? TEMPLATES[tpl] : null;
   $('panelTitle').textContent = item ? 'Edit activity' : (t ? t.label : 'New activity');
+  const showLinkApp = !item && tpl !== 'search' && tpl !== 'training';
+  $('linkAppField').style.display = showLinkApp ? '' : 'none';
+  if (showLinkApp) { buildLinkAppOptions(); $('f-linkapp').value = ''; }
   $('f-date').value   = item ? (item.date || '') : toISO(new Date());
   $('f-activity').value = item ? (item.activity || '') : (t ? t.activity : '');
   $('f-title').value  = item ? (item.title || '') : (t && t.title ? t.title : '');
