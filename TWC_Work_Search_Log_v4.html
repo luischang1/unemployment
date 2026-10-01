@@ -1435,9 +1435,13 @@ $('f-linkapp').onchange = e => {
   $('f-retirement').checked = !!sal.retirement;
   $('f-email').value = a.email || '';
   $('f-phone').value = a.phone || '';
+  $('f-person').value = a.person || '';
+  $('f-compensation').value = a.compensation || '';
+  $('f-techmatch').value = a.techMatch || '';
+  $('f-missionfit').value = a.missionFit || '';
   syncPanelChecks();
   updateStarsPreview();
-  if (l.city || l.address || a.email || a.phone) setExtraOpen(true);
+  if (l.city || l.address || a.email || a.phone || a.compensation || a.techMatch || a.missionFit) setExtraOpen(true);
 };
 function bindOpt(el) {
   el.onclick = e => {
