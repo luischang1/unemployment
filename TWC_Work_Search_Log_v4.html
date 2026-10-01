@@ -130,7 +130,11 @@
   .stepper { display: flex; align-items: center; gap: 2px; }
   h2 { margin: 0; font-size: 32px; letter-spacing: -.02em; font-weight: 700; }
   h2 .yr { color: color-mix(in srgb, var(--ink) 40%, transparent); }
-  .weektally { margin-left: auto; display: flex; align-items: baseline; gap: 12px; }
+  .stats-list {
+    margin-left: auto; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    list-style: none;
+  }
+  .stats-list li { display: flex; align-items: baseline; gap: 6px; }
 
   .tag {
     display: inline-flex; align-items: center; font-size: 11px; letter-spacing: .02em;
@@ -138,7 +142,7 @@
   }
   .tag-met { background: var(--accent-100); color: var(--accent-800); }
   .tag-short { background: var(--accent2-100); color: var(--accent2-800); }
-  .weektally .note { font-size: 13px; color: color-mix(in srgb, var(--ink) 50%, transparent); }
+  .stats-list .note { font-size: 13px; color: color-mix(in srgb, var(--ink) 50%, transparent); }
   .stepper.off { opacity: .35; pointer-events: none; }
 
   /* ---------- filter popover ---------- */
@@ -278,6 +282,8 @@
   .filebar { margin-left: auto; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   .filebar .filestatus { font-size: 13px; color: color-mix(in srgb, var(--ink) 60%, transparent); }
   .filebar .filestatus.warn { color: var(--accent2-700); font-weight: 600; }
+  #fsButtons { display: flex; align-items: center; gap: 8px; }
+  #fsButtons select.input { width: auto; min-height: 30px; padding: 4px 8px; font-size: 13.5px; }
 
   .disclaimer {
     margin: 30px 0 0; font-size: 12.5px; line-height: 1.6; max-width: 760px;
@@ -398,7 +404,7 @@
     <div style="max-width:600px;">
       <div class="eyebrow">Texas Workforce Commission &middot; Form BN90DE</div>
       <h1>Work Search Activity Log</h1>
-      <p class="sub">Three activities required each week. Weeks run Sunday through Saturday.</p>
+      <p class="sub">Five activities required each week. Weeks run Sunday through Saturday.</p>
     </div>
     <div class="resources">
       <span class="rlabel">Resources</span>
@@ -425,10 +431,13 @@
     </div>
     <h2 id="weeklabel"></h2>
     <button class="btn btn-ghost" id="today">This week</button>
-    <div class="weektally" id="weektally">
-      <span class="tag" id="statusTag"></span>
-      <span class="note" id="statusNote"></span>
-    </div>
+    <ul class="stats-list" id="statsList">
+      <li id="weeklyStat"><span class="tag" id="statusTag"></span><span class="note" id="statusNote"></span></li>
+      <li title="Distinct companies you've applied to"><span class="tag tag-neutral" id="statCompanies"></span></li>
+      <li title="Distinct company + job title combinations applied to"><span class="tag tag-neutral" id="statApps"></span></li>
+      <li title="Applications not marked inactive"><span class="tag tag-neutral" id="statActive"></span></li>
+      <li title="Active applications applied to within the last month"><span class="tag tag-neutral" id="statRecent"></span></li>
+    </ul>
     <div class="filterwrap">
       <button class="btn btn-secondary" id="filterBtn" aria-haspopup="true">Filter</button>
       <div class="pop" id="filterPop">
@@ -484,15 +493,17 @@
   <div class="toolbar">
     <div class="prints">
       <button class="btn btn-secondary" id="printBtn">Print week</button>
-      <button class="btn btn-secondary" id="printAllBtn">Print all</button>
       <button class="btn btn-secondary" id="recalcBtn">Calculate stars</button>
       <button class="btn btn-secondary" id="bulkInactiveBtn">Mark inactive</button>
     </div>
     <div class="filebar">
       <span class="filestatus" id="fileStatus">Checking for a connected data file&hellip;</span>
       <div id="fsButtons" style="display:none;">
-        <button class="btn btn-ghost" id="connectBtn">Open JSON file</button>
-        <button class="btn btn-ghost" id="newFileBtn">Create JSON file</button>
+        <select class="input" id="fileAction" aria-label="File action">
+          <option value="use" selected>Use file</option>
+          <option value="create">Create JSON file</option>
+        </select>
+        <button class="btn btn-ghost" id="fileActionBtn">Use file</button>
       </div>
       <div id="fallbackButtons" style="display:none;">
         <button class="btn btn-ghost" id="importBtn">Import JSON</button>
@@ -831,6 +842,7 @@ function applyTheme(mode) {
   });
 })();
 
+const WEEKLY_REQUIRED = 5;
 const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MON_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1060,24 +1072,32 @@ async function reconnectFile() {
     toast('Permission denied');
   }
 }
+let fileUseAction = { label: 'Use file', onclick: chooseExistingFile };
 function updateFileUI() {
   const status = $('fileStatus');
-  const btn = $('connectBtn');
   status.classList.remove('warn');
   if (fileHandle && fileHandleVerified) {
     status.textContent = 'Saving to ' + fileHandle.name;
-    btn.textContent = 'Change file';
-    btn.onclick = chooseExistingFile;
+    fileUseAction = { label: 'Use file', onclick: chooseExistingFile };
   } else if (fileHandle && !fileHandleVerified) {
-    status.textContent = 'Click to reconnect ' + fileHandle.name + ' and resume saving.';
+    status.textContent = fileHandle.name;
     status.classList.add('warn');
-    btn.textContent = 'Reconnect file';
-    btn.onclick = reconnectFile;
+    fileUseAction = { label: 'Reconnect file', onclick: reconnectFile };
   } else {
     status.textContent = 'No data file connected — changes are only saved in this browser.';
     status.classList.add('warn');
-    btn.textContent = 'Open JSON file';
-    btn.onclick = chooseExistingFile;
+    fileUseAction = { label: 'Use file', onclick: chooseExistingFile };
+  }
+  syncFileActionBtn();
+}
+function syncFileActionBtn() {
+  const btn = $('fileActionBtn');
+  if ($('fileAction').value === 'create') {
+    btn.textContent = 'Create JSON file';
+    btn.onclick = createNewDataFile;
+  } else {
+    btn.textContent = fileUseAction.label;
+    btn.onclick = fileUseAction.onclick;
   }
 }
 
@@ -1156,10 +1176,37 @@ function forWeek(start) {
   const s = toISO(start), e = toISO(weekEnd(start));
   return state.activities.filter(a => a.date >= s && a.date <= e).sort((a,b) => a.date.localeCompare(b.date));
 }
-function allWeeks() {
-  const keys = new Set(state.activities.map(a => toISO(weekStart(parseISO(a.date)))));
-  return [...keys].sort();
+
+/* ---------- Application stats: group "Applied online" entries into one record per company + job title ---------- */
+function applicationGroups() {
+  const map = new Map();
+  state.activities.filter(a => a.type === 'applied').forEach(a => {
+    const key = (a.company || '').trim().toLowerCase() + '|' + (a.title || '').trim().toLowerCase();
+    let g = map.get(key);
+    if (!g) { g = { company: a.company, active: false, date: '' }; map.set(key, g); }
+    if (a.status !== 'inactive') g.active = true;
+    if (a.date > g.date) g.date = a.date;
+  });
+  return [...map.values()];
 }
+function computeStats() {
+  const apps = applicationGroups();
+  const companies = new Set(apps.map(g => (g.company || '').trim()).filter(Boolean)).size;
+  const active = apps.filter(g => g.active);
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - 1);
+  const cutoffISO = toISO(cutoff);
+  const recent = active.filter(g => g.date >= cutoffISO).length;
+  return { companies, total: apps.length, active: active.length, recent };
+}
+function renderStats() {
+  const s = computeStats();
+  $('statCompanies').textContent = s.companies + (s.companies === 1 ? ' company' : ' companies');
+  $('statApps').textContent = s.total + (s.total === 1 ? ' application' : ' applications');
+  $('statActive').textContent = s.active + ' active';
+  $('statRecent').textContent = s.recent + ' recent active';
+}
+
 const RESULT_LABEL = { application:'Application filed', other:'Other', nothiring:'Not hiring', hired:'Hired' };
 
 function esc(s) {
@@ -1254,13 +1301,26 @@ function rowHtml(a, showMonth) {
   '</div>';
 }
 
+function renderWeeklyStat() {
+  const n = forWeek(weekStart(anchor)).length;
+  const tag = $('statusTag'), note = $('statusNote');
+  if (n >= WEEKLY_REQUIRED) {
+    tag.className = 'tag tag-met'; tag.textContent = n + ' logged';
+    note.textContent = 'requirement met';
+  } else {
+    tag.className = 'tag tag-short'; tag.textContent = n + ' of ' + WEEKLY_REQUIRED;
+    note.textContent = (WEEKLY_REQUIRED - n) + ' more required this week';
+  }
+}
+
 function render() {
   const filtering = filterActive();
   renderChips();
   syncFilterButton();
   $('stepper').classList.toggle('off', filtering);
   $('today').style.display = filtering ? 'none' : '';
-  $('weektally').style.display = filtering ? 'none' : '';
+  renderStats();
+  renderWeeklyStat();
 
   let items;
   if (filtering) {
@@ -1271,15 +1331,6 @@ function render() {
     const start = weekStart(anchor), end = weekEnd(start);
     $('weeklabel').innerHTML = fmtShort(start) + ' &ndash; ' + fmtShort(end) + ' <span class="yr">' + end.getFullYear() + '</span>';
     items = forWeek(start);
-    const n = items.length;
-    const tag = $('statusTag'), note = $('statusNote');
-    if (n >= 3) {
-      tag.className = 'tag tag-met'; tag.textContent = n + ' logged';
-      note.textContent = 'requirement met';
-    } else {
-      tag.className = 'tag tag-short'; tag.textContent = n + ' of 3';
-      note.textContent = (3 - n) + ' more required this week';
-    }
   }
 
   const box = $('entries');
@@ -1595,7 +1646,7 @@ $('prev').onclick = () => { anchor = new Date(anchor.getFullYear(), anchor.getMo
 $('next').onclick = () => { anchor = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + 7); render(); };
 $('today').onclick = () => { anchor = new Date(); render(); };
 
-$('newFileBtn').onclick = createNewDataFile;
+$('fileAction').onchange = syncFileActionBtn;
 $('importBtn').onclick = () => $('importFile').click();
 $('exportBtn').onclick = exportJSON;
 $('importFile').onchange = e => {
@@ -1680,14 +1731,11 @@ function buildWeekPages(startISO) {
   return chunks.map((chunk, i) => buildSheet(chunk, startISO, i + 1, chunks.length, items.length));
 }
 
-function doPrint(scope) {
-  const weeks = scope === 'all' ? allWeeks() : [toISO(weekStart(anchor))];
-  if (!weeks.length) { toast('Nothing to print yet'); return; }
-  $('printout').innerHTML = weeks.flatMap(buildWeekPages).join('');
+function doPrint() {
+  $('printout').innerHTML = buildWeekPages(toISO(weekStart(anchor))).join('');
   setTimeout(() => window.print(), 60);
 }
-$('printBtn').onclick = () => doPrint('week');
-$('printAllBtn').onclick = () => doPrint('all');
+$('printBtn').onclick = doPrint;
 
 const BULK_REASONS = Object.freeze({ rejected: 'Rejected', withdrawn: 'Withdrawn', closed: 'Position closed', noresponse: 'No response' });
 function fmtStamp(d) {
