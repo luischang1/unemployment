@@ -282,8 +282,8 @@
   .filebar { margin-left: auto; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   .filebar .filestatus { font-size: 13px; color: color-mix(in srgb, var(--ink) 60%, transparent); }
   .filebar .filestatus.warn { color: var(--accent2-700); font-weight: 600; }
-  #fsButtons, #fallbackButtons { display: flex; align-items: center; gap: 8px; }
-  #fsButtons select.input, #fallbackButtons select.input { width: auto; min-height: 30px; padding: 4px 8px; font-size: 13.5px; }
+  #fileButtons { display: flex; align-items: center; gap: 8px; }
+  #fileButtons select.input { width: auto; min-height: 30px; padding: 4px 8px; font-size: 13.5px; }
 
   .disclaimer {
     margin: 30px 0 0; font-size: 12.5px; line-height: 1.6; max-width: 760px;
@@ -498,19 +498,12 @@
     </div>
     <div class="filebar">
       <span class="filestatus" id="fileStatus">Checking for a connected data file&hellip;</span>
-      <div id="fsButtons" style="display:none;">
+      <div id="fileButtons" style="display:none;">
         <select class="input" id="fileAction" aria-label="File action">
           <option value="use" selected>Use file</option>
           <option value="create">Create JSON file</option>
         </select>
         <button class="btn btn-ghost" id="fileActionBtn">Use file</button>
-      </div>
-      <div id="fallbackButtons" style="display:none;">
-        <select class="input" id="fallbackAction" aria-label="File action">
-          <option value="import" selected>Import JSON</option>
-          <option value="export">Export JSON</option>
-        </select>
-        <button class="btn btn-ghost" id="fallbackActionBtn">Import JSON</button>
         <input type="file" id="importFile" accept="application/json" style="display:none">
       </div>
     </div>
@@ -1075,7 +1068,7 @@ async function reconnectFile() {
     toast('Permission denied');
   }
 }
-let fileUseAction = { label: 'Use file', onclick: chooseExistingFile };
+let fileUseAction = { label: 'Use file', onclick: FS_SUPPORTED ? chooseExistingFile : () => $('importFile').click() };
 function updateFileUI() {
   const status = $('fileStatus');
   status.classList.remove('warn');
@@ -1089,7 +1082,7 @@ function updateFileUI() {
   } else {
     status.textContent = 'No data file connected — changes are only saved in this browser.';
     status.classList.add('warn');
-    fileUseAction = { label: 'Use file', onclick: chooseExistingFile };
+    fileUseAction = { label: 'Use file', onclick: FS_SUPPORTED ? chooseExistingFile : () => $('importFile').click() };
   }
   syncFileActionBtn();
 }
@@ -1097,7 +1090,7 @@ function syncFileActionBtn() {
   const btn = $('fileActionBtn');
   if ($('fileAction').value === 'create') {
     btn.textContent = 'Create JSON file';
-    btn.onclick = createNewDataFile;
+    btn.onclick = FS_SUPPORTED ? createNewDataFile : exportJSON;
   } else {
     btn.textContent = fileUseAction.label;
     btn.onclick = fileUseAction.onclick;
@@ -1140,7 +1133,6 @@ async function load() {
   }
 
   if (FS_SUPPORTED) {
-    $('fsButtons').style.display = 'flex';
     try {
       const handle = await idbGet('fileHandle');
       if (handle) {
@@ -1152,9 +1144,8 @@ async function load() {
         }
       }
     } catch (e) { /* IndexedDB unavailable (e.g. some file:// contexts) — user can reconnect manually */ }
-  } else {
-    $('fallbackButtons').style.display = 'flex';
   }
+  $('fileButtons').style.display = 'flex';
   updateFileUI();
 }
 
@@ -1650,19 +1641,6 @@ $('next').onclick = () => { anchor = new Date(anchor.getFullYear(), anchor.getMo
 $('today').onclick = () => { anchor = new Date(); render(); };
 
 $('fileAction').onchange = syncFileActionBtn;
-
-function syncFallbackActionBtn() {
-  const btn = $('fallbackActionBtn');
-  if ($('fallbackAction').value === 'export') {
-    btn.textContent = 'Export JSON';
-    btn.onclick = exportJSON;
-  } else {
-    btn.textContent = 'Import JSON';
-    btn.onclick = () => $('importFile').click();
-  }
-}
-$('fallbackAction').onchange = syncFallbackActionBtn;
-syncFallbackActionBtn();
 $('importFile').onchange = e => {
   const file = e.target.files[0];
   if (file) importJSON(file);
