@@ -689,6 +689,7 @@
     <div class="dialog-actions">
       <button class="btn btn-primary" id="saveBtn">Save activity</button>
       <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+      <button class="btn btn-ghost danger" id="panelDeleteBtn" style="display:none;">Delete</button>
       <span class="hint">&#8984;&crarr; saves &middot; Esc closes</span>
     </div>
   </div>
@@ -1293,8 +1294,7 @@ function rowHtml(a, showMonth) {
     '</div>' +
     '<div class="side">' +
       '<div class="tools">' +
-        '<button class="btn btn-ghost" onclick="editItem(\'' + a.id + '\')">Edit</button>' +
-        '<button class="btn btn-ghost danger" onclick="delItem(\'' + a.id + '\')">Delete</button>' +
+        '<button class="btn btn-ghost btn-icon" onclick="editItem(\'' + a.id + '\')" aria-label="Edit activity" title="Edit activity">&#9998;</button>' +
       '</div>' +
       renderStars(effectiveStars(a)) + inactiveTag +
     '</div>' +
@@ -1593,6 +1593,7 @@ function openPanel(item, tpl) {
   $('f-stars').value  = item && typeof item.stars === 'number' ? item.stars : '';
   setExtraOpen(!!((item && (item.city || item.address || item.email || item.phone || item.detail || item.techMatch || item.missionFit ||
     item.status === 'inactive' || (item.result && item.result !== 'application'))) || (t && t.status === 'inactive')));
+  $('panelDeleteBtn').style.display = item ? '' : 'none';
   syncPanelChecks();
   updateStarsPreview();
   $('panelBackdrop').style.display = 'grid';
@@ -1643,6 +1644,7 @@ $('confirmDeleteBtn').onclick = async () => {
   if (!item) return;
   state.activities = state.activities.filter(a => a.id !== id);
   state.deleted = [...(state.deleted || []), { ...item, deletedAt: new Date().toISOString() }];
+  if (editingId === id) closePanel();
   await save(); render(); toast('Activity deleted');
 };
 
@@ -1688,6 +1690,7 @@ $('saveBtn').onclick = doSave;
 
 $('cancelBtn').onclick = closePanel;
 $('panelClose').onclick = closePanel;
+$('panelDeleteBtn').onclick = () => { if (editingId) delItem(editingId); };
 $('panelBackdrop').addEventListener('keydown', e => {
   if (e.key === 'Escape') closePanel();
   else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') doSave();
