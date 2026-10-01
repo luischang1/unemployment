@@ -346,8 +346,9 @@
 
   .dialog-actions { display: flex; gap: 12px; align-items: center; margin-top: 28px; }
   .dialog-actions .hint {
-    font-size: 12.5px; color: color-mix(in srgb, var(--ink) 50%, transparent); margin-left: auto;
+    font-size: 12.5px; color: color-mix(in srgb, var(--ink) 50%, transparent);
   }
+  .dialog-actions .btn-icon.danger { margin-left: auto; }
 
   .toast {
     position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(80px);
@@ -689,8 +690,16 @@
     <div class="dialog-actions">
       <button class="btn btn-primary" id="saveBtn">Save activity</button>
       <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
-      <button class="btn btn-ghost danger" id="panelDeleteBtn" style="display:none;">Delete</button>
       <span class="hint">&#8984;&crarr; saves &middot; Esc closes</span>
+      <button class="btn btn-ghost btn-icon danger" id="panelDeleteBtn" style="display:none;" aria-label="Delete activity" title="Delete activity">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 6h18"/>
+          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/>
+          <path d="M14 11v6"/>
+        </svg>
+      </button>
     </div>
   </div>
 </div>
