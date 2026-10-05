@@ -415,7 +415,7 @@
         <a href="https://www.workintexas.com/" target="_blank" rel="noopener">WorkInTexas</a>
         <a href="https://login.risesmart.com/login" target="_blank" rel="noopener">RiseSmart</a>
         <a href="https://my.greenhouse.io/jobs/search?query=Software&location=Austin%2C%20Texas%2C%20United%20States&lat=30.222346&lon=-97.836521&location_type=locality&country_short_name=US&state_short_name=TX&date_posted=past_thirty_days&salary=more_than_180k&work_type[]=hybrid&work_type[]=remote&employment_type[]=full_time" target="_blank" rel="noopener">Greenhouse</a>
-        <a href="file:///Users/luischang1/Downloads/Luis%20Chang%20-%20Resume.pdf" target="_blank" rel="noopener">Resume</a>
+        <a id="resumeLink" href="#" target="_blank" rel="noopener" style="display:none;">Resume</a>
       </div>
       <span class="rlabel" style="margin-top:6px;">Theme</span>
       <div class="theme-toggle" id="themeToggle">
@@ -776,6 +776,7 @@ const DEFAULT_RULES = {
   mission: { good: 1, neutral: 0.5, poor: 0 },
   interaction: { yes: 1, no: 0 },
   minSalaryK: 180,
+  resumePath: '',
   notes: 'Star rating (0-5, half-star steps) = location + salary + stack + mission + interaction. ' +
     'Location: remote=1, hybrid=0.5, on-site=0 (inferred from the Location field). ' +
     'Salary: matches target (>= minSalaryK)=1, unknown/not listed=0.5, below target=0 (inferred from the Compensation field). ' +
@@ -1323,8 +1324,17 @@ function renderWeeklyStat() {
   }
 }
 
+function renderResumeLink() {
+  const path = ((state.rules && state.rules.resumePath) || '').trim();
+  const link = $('resumeLink');
+  if (!path) { link.style.display = 'none'; return; }
+  link.href = /^[a-z][a-z0-9+.-]*:/i.test(path) ? path : 'file://' + path.split('/').map(encodeURIComponent).join('/');
+  link.style.display = '';
+}
+
 function render() {
   const filtering = filterActive();
+  renderResumeLink();
   renderChips();
   syncFilterButton();
   $('stepper').classList.toggle('off', filtering);
