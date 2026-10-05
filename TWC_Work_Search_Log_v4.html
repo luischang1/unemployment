@@ -140,6 +140,25 @@
     display: inline-flex; align-items: center; font-size: 11px; letter-spacing: .02em;
     padding: 3px 10px; border-radius: var(--radius-sm);
   }
+  button.tag { border: 0; font: inherit; font-size: 11px; cursor: pointer; }
+  button.tag:hover { filter: brightness(1.12); }
+  button.tag:focus-visible { outline: 2px solid var(--accent-800); outline-offset: 2px; }
+  .stat-group { border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+  .stat-group:first-child { border-top: 0; }
+  .stat-group summary {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    padding: 12px 0; cursor: pointer; font-size: 15px; font-weight: 600; list-style: none;
+  }
+  .stat-group summary::-webkit-details-marker { display: none; }
+  .stat-group summary::before { content: '\25B8'; display: inline-block; width: 18px; transition: transform .12s; }
+  .stat-group[open] summary::before { transform: rotate(90deg); }
+  .stat-group summary .name { flex: 1; }
+  .stat-group summary .total { font-weight: 700; }
+  .stat-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 0 0 12px; }
+  .stat-table th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: color-mix(in srgb, var(--ink) 55%, transparent); padding: 4px 8px 4px 18px; }
+  .stat-table td { padding: 6px 8px 6px 18px; border-top: 1px solid color-mix(in srgb, var(--ink) 8%, transparent); }
+  .stat-table td:last-child, .stat-table th:last-child { text-align: right; white-space: nowrap; padding-right: 0; }
+  .stat-body { max-height: 60vh; overflow: auto; margin-top: 10px; }
   .tag-met { background: var(--accent-100); color: var(--accent-800); }
   .tag-short { background: var(--accent2-100); color: var(--accent2-800); }
   .stats-list .note { font-size: 13px; color: color-mix(in srgb, var(--ink) 50%, transparent); }
@@ -434,10 +453,10 @@
     <button class="btn btn-ghost" id="today">This week</button>
     <ul class="stats-list" id="statsList">
       <li id="weeklyStat"><span class="tag" id="statusTag"></span><span class="note" id="statusNote"></span></li>
-      <li title="Distinct companies you've applied to"><span class="tag tag-neutral" id="statCompanies"></span></li>
-      <li title="Distinct company + job title combinations applied to"><span class="tag tag-neutral" id="statApps"></span></li>
-      <li title="Applications not marked inactive"><span class="tag tag-neutral" id="statActive"></span></li>
-      <li title="Active applications applied to within the last month"><span class="tag tag-neutral" id="statRecent"></span></li>
+      <li title="Distinct companies you've applied to"><button type="button" class="tag tag-neutral" id="statCompanies"></button></li>
+      <li title="Distinct company + job title combinations applied to"><button type="button" class="tag tag-neutral" id="statApps"></button></li>
+      <li title="Applications not marked inactive"><button type="button" class="tag tag-neutral" id="statActive"></button></li>
+      <li title="Active applications applied to within the last month"><button type="button" class="tag tag-neutral" id="statRecent"></button></li>
     </ul>
     <div class="filterwrap">
       <button class="btn btn-secondary" id="filterBtn" aria-haspopup="true">Filter</button>
@@ -715,6 +734,16 @@
       <button class="btn btn-ghost danger" id="confirmDeleteBtn">Delete</button>
       <button class="btn btn-secondary" id="confirmCancelBtn">Cancel</button>
     </div>
+  </div>
+</div>
+
+<div class="dialog-backdrop" id="statBackdrop" style="display:none;">
+  <div class="dialog" style="width:min(520px,100%);">
+    <div class="dialog-head">
+      <h3 style="font-size:22px;">Application summary</h3>
+      <button class="btn btn-ghost" id="statClose">Close</button>
+    </div>
+    <div class="stat-body" id="statItems"></div>
   </div>
 </div>
 
@@ -1193,7 +1222,7 @@ function applicationGroups() {
   state.activities.filter(a => a.type === 'applied').forEach(a => {
     const key = (a.company || '').trim().toLowerCase() + '|' + (a.title || '').trim().toLowerCase();
     let g = map.get(key);
-    if (!g) { g = { company: a.company, active: false, date: '' }; map.set(key, g); }
+    if (!g) { g = { company: a.company, title: a.title, active: false, date: '' }; map.set(key, g); }
     if (a.status !== 'inactive') g.active = true;
     if (a.date > g.date) g.date = a.date;
   });
@@ -1209,6 +1238,41 @@ function computeStats() {
   const recent = active.filter(g => g.date >= cutoffISO).length;
   return { companies, total: apps.length, active: active.length, recent };
 }
+function statLists() {
+  const apps = applicationGroups();
+  const byDate = (a, b) => b.date.localeCompare(a.date);
+  const appRows = list => list.map(g => [g.company || 'Unknown company', g.title || '', g.date]);
+  const appCols = ['Company', 'Job title', 'Date'];
+  const counts = new Map();
+  apps.forEach(g => { const c = (g.company || '').trim(); if (c) counts.set(c, (counts.get(c) || 0) + 1); });
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - 1);
+  const cutoffISO = toISO(cutoff);
+  const active = apps.filter(g => g.active).sort(byDate);
+  return [
+    { name: 'Companies', cols: ['Company', 'Applications'],
+      rows: [...counts].sort((a, b) => a[0].localeCompare(b[0])) },
+    { name: 'Applications', cols: appCols, rows: appRows([...apps].sort(byDate)) },
+    { name: 'Active', cols: appCols, rows: appRows(active) },
+    { name: 'Recent active', cols: appCols, rows: appRows(active.filter(g => g.date >= cutoffISO)) }
+  ];
+}
+function openStat() {
+  $('statItems').innerHTML = statLists().map(g =>
+    '<details class="stat-group"><summary><span class="name">' + esc(g.name) + '</span><span class="total">' + g.rows.length + '</span></summary>' +
+    (g.rows.length
+      ? '<table class="stat-table"><thead><tr>' + g.cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' +
+        g.rows.map(r => '<tr>' + r.map(c => '<td>' + esc(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table>'
+      : '<p style="padding:0 0 12px 18px; font-size:14px;">Nothing to show.</p>') +
+    '</details>').join('');
+  $('statBackdrop').style.display = 'grid';
+  $('statClose').focus();
+}
+function closeStat() { $('statBackdrop').style.display = 'none'; }
+['statCompanies', 'statApps', 'statActive', 'statRecent'].forEach(id => { $(id).onclick = openStat; });
+$('statClose').onclick = closeStat;
+$('statBackdrop').addEventListener('keydown', e => { if (e.key === 'Escape') closeStat(); });
+$('statBackdrop').addEventListener('click', e => { if (e.target === $('statBackdrop')) closeStat(); });
 function renderStats() {
   const s = computeStats();
   $('statCompanies').textContent = s.companies + (s.companies === 1 ? ' company' : ' companies');
