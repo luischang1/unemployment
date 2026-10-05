@@ -1328,7 +1328,8 @@ function renderResumeLink() {
   const path = ((state.rules && state.rules.resumePath) || '').trim();
   const link = $('resumeLink');
   if (!path) { link.style.display = 'none'; return; }
-  link.href = /^[a-z][a-z0-9+.-]*:/i.test(path) ? path : 'file://' + path.split('/').map(encodeURIComponent).join('/');
+  const abs = path.startsWith('/') ? path : '/' + path;
+  link.href = /^[a-z][a-z0-9+.-]+:/i.test(path) ? path : 'file://' + abs.split('/').map(encodeURIComponent).join('/');
   link.style.display = '';
 }
 
