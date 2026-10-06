@@ -1869,25 +1869,10 @@ $('saveFilesBtn').onclick = saveToFiles;
   const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   if (FS_SUPPORTED || !standalone) return;
   const THRESHOLD = 90, hint = $('pullHint');
-  let startY = null, pull = 0, prompting = false, promptTimer = 0;
+  let startY = null, pull = 0;
   const dialogOpen = () => [...document.querySelectorAll('.dialog-backdrop')].some(d => d.style.display !== 'none');
-  function reset() { startY = null; pull = 0; if (!prompting) hideHint(); }
-  function hideHint() { hint.style.transition = 'transform .2s'; hint.style.transform = 'translate(-50%, -100%)'; hint.style.pointerEvents = 'none'; }
-  // iOS won't open a file picker from the end of a swipe (it isn't a tap), so the release shows a button to tap instead.
-  function showPrompt() {
-    prompting = true;
-    hint.textContent = 'Tap here to choose the file';
-    hint.style.paddingTop = 'calc(env(safe-area-inset-top) + 10px)';
-    hint.style.transition = 'transform .2s';
-    hint.style.transform = 'translate(-50%, 0)';
-    hint.style.pointerEvents = 'auto';
-    clearTimeout(promptTimer);
-    promptTimer = setTimeout(endPrompt, 8000);
-  }
-  function endPrompt() { prompting = false; clearTimeout(promptTimer); hideHint(); }
-  hint.addEventListener('click', () => { endPrompt(); $('importFile').click(); });
+  function reset() { startY = null; pull = 0; hint.style.transition = 'transform .2s'; hint.style.transform = 'translate(-50%, -100%)'; }
   document.addEventListener('touchstart', e => {
-    if (prompting && !hint.contains(e.target)) endPrompt();
     startY = window.scrollY <= 0 && e.touches.length === 1 && !dialogOpen() ? e.touches[0].clientY : null;
     pull = 0;
   }, { passive: true });
@@ -1902,8 +1887,8 @@ $('saveFilesBtn').onclick = saveToFiles;
   }, { passive: true });
   document.addEventListener('touchend', () => {
     const go = startY !== null && pull >= THRESHOLD;
-    startY = null; pull = 0;
-    if (go) showPrompt(); else if (!prompting) hideHint();
+    reset();
+    if (go) $('importFile').click();
   }, { passive: true });
   document.addEventListener('touchcancel', reset, { passive: true });
 })();
