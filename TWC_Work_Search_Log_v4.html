@@ -300,12 +300,6 @@
   .toolbar .prints { display: flex; gap: 10px; }
   .filebar { margin-left: auto; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   .filebar .filestatus { font-size: 13px; color: color-mix(in srgb, var(--ink) 60%, transparent); }
-  #pullHint {
-    position: fixed; top: 0; left: 50%; z-index: 50; transform: translate(-50%, -100%);
-    padding: 8px 16px; border-radius: 0 0 var(--radius-sm) var(--radius-sm); font-size: 13px; white-space: nowrap;
-    background: var(--neutral-100); box-shadow: var(--shadow-lg); pointer-events: none;
-  }
-  .filebar > div { display: flex; gap: 8px; align-items: baseline; }
   .filebar .filestatus.warn { color: var(--accent2-700); font-weight: 600; }
   #fileButtons { display: flex; align-items: center; gap: 8px; }
   #fileButtons select.input { width: auto; min-height: 30px; padding: 4px 8px; font-size: 13.5px; }
@@ -532,10 +526,6 @@
         <button class="btn btn-ghost" id="fileActionBtn">Use file</button>
         <input type="file" id="importFile" accept="application/json" style="display:none">
       </div>
-      <div id="syncButtons" style="display:none;">
-        <button class="btn btn-secondary" id="loadLatestBtn">Load latest</button>
-        <button class="btn btn-ghost" id="saveFilesBtn">Save to Files</button>
-      </div>
     </div>
   </div>
 
@@ -563,8 +553,6 @@
     </div>
   </div>
 </div>
-
-<div id="pullHint" aria-hidden="true"></div>
 
 <div class="dialog-backdrop" id="panelBackdrop" style="display:none;">
   <div class="dialog">
@@ -1074,7 +1062,6 @@ async function readFromHandle() {
   } catch (e) {
     state = { activities: [], deleted: [], rules: DEFAULT_RULES };
   }
-  snapshotState();
 }
 async function writeToHandle(payload) {
   const writable = await fileHandle.createWritable();
@@ -1130,14 +1117,6 @@ let fileUseAction = { label: 'Use file', onclick: FS_SUPPORTED ? chooseExistingF
 function updateFileUI() {
   const status = $('fileStatus');
   status.classList.remove('warn');
-  if (!FS_SUPPORTED) {
-    const loaded = lsGet(LOADED_KEY);
-    const unsaved = lsGet(UNSAVED_KEY) === '1';
-    status.textContent = (loaded ? 'Loaded from file ' + new Date(loaded).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'No file loaded yet') +
-      (unsaved ? ' \u00B7 changes not saved to the file' : '');
-    if (!loaded || unsaved) status.classList.add('warn');
-    return;
-  }
   if (fileHandle && fileHandleVerified) {
     status.textContent = 'Saving to ' + fileHandle.name;
     fileUseAction = { label: 'Use file', onclick: chooseExistingFile };
@@ -1173,73 +1152,16 @@ function exportJSON() {
   URL.revokeObjectURL(url);
   toast('Downloaded twc-worksearch-data.json');
 }
-const LOADED_KEY = 'twc-last-loaded', UNSAVED_KEY = 'twc-unsaved';
-function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
-function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-
-/* Each activity gets an updatedAt stamp when it changes, so a merge can keep whichever copy is newer. */
-let snap = new Map();
-function activityJSON(a) {
-  const { updatedAt, ...rest } = a;
-  return JSON.stringify(rest, Object.keys(rest).sort());
-}
-function snapshotState() {
-  snap = new Map(state.activities.map(a => [a.id, { json: activityJSON(a), updatedAt: a.updatedAt || '' }]));
-}
-function stampChanges() {
-  const now = new Date().toISOString();
-  state.activities.forEach(a => {
-    const prev = snap.get(a.id), json = activityJSON(a);
-    if (!prev || prev.json !== json) a.updatedAt = now;
-    else if (!a.updatedAt && prev.updatedAt) a.updatedAt = prev.updatedAt;
-    snap.set(a.id, { json, updatedAt: a.updatedAt || '' });
-  });
-}
-function mergeStates(local, incoming) {
-  const deleted = new Map();
-  [...(incoming.deleted || []), ...(local.deleted || [])].forEach(d => { if (!deleted.has(d.id)) deleted.set(d.id, d); });
-  const incomingDeleted = new Set((incoming.deleted || []).map(d => d.id));
-  const byId = new Map();
-  let localWins = [...deleted.keys()].filter(id => !incomingDeleted.has(id)).length;
-  local.activities.forEach(a => byId.set(a.id, a));
-  incoming.activities.forEach(b => {
-    const a = byId.get(b.id);
-    if (!a || (b.updatedAt || '') >= (a.updatedAt || '')) byId.set(b.id, b);
-  });
-  const incomingIds = new Map(incoming.activities.map(b => [b.id, b]));
-  byId.forEach((a, id) => { if (incomingIds.get(id) !== a && !deleted.has(id)) localWins++; });
-  return {
-    merged: { activities: [...byId.values()].filter(a => !deleted.has(a.id)), deleted: [...deleted.values()], rules: incoming.rules || local.rules },
-    localWins
-  };
-}
 async function importJSON(file) {
   const text = await file.text();
-  let incoming;
-  try { incoming = normalizeState(JSON.parse(text)); } catch (e) { toast('That file is not valid JSON'); return; }
-  const { merged, localWins } = mergeStates(state, incoming);
-  state = normalizeState(merged);
-  snapshotState();
-  localStorage.setItem(KEY, JSON.stringify(serializeState()));
-  lsSet(LOADED_KEY, new Date().toISOString());
-  lsSet(UNSAVED_KEY, localWins > 0 ? '1' : '0');
-  buildCompanyOptions();
-  render();
-  updateFileUI();
-  toast(localWins > 0 ? 'Loaded ' + file.name + ' — kept ' + localWins + ' newer change' + (localWins === 1 ? '' : 's') + ' from this device' : 'Loaded ' + file.name);
-}
-async function saveToFiles() {
-  const file = new File([JSON.stringify(serializeState(), null, 2)], 'twc-worksearch-data.json', { type: 'application/json' });
   try {
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file] });
-    } else {
-      exportJSON();
-    }
-    lsSet(UNSAVED_KEY, '0');
-    updateFileUI();
+    state = normalizeState(JSON.parse(text));
+    localStorage.setItem(KEY, JSON.stringify(serializeState()));
+    buildCompanyOptions();
+    render();
+    toast('Imported ' + file.name);
   } catch (e) {
-    if (e.name !== 'AbortError') toast('Could not share the file');
+    toast('That file is not valid JSON');
   }
 }
 
@@ -1268,18 +1190,14 @@ async function load() {
       }
     } catch (e) { /* IndexedDB unavailable (e.g. some file:// contexts) — user can reconnect manually */ }
   }
-  snapshotState();
-  $('fileButtons').style.display = FS_SUPPORTED ? 'flex' : 'none';
-  $('syncButtons').style.display = FS_SUPPORTED ? 'none' : 'flex';
+  $('fileButtons').style.display = 'flex';
   updateFileUI();
 }
 
 async function save() {
   buildCompanyOptions();
-  stampChanges();
   const payload = serializeState();
   localStorage.setItem(KEY, JSON.stringify(payload));
-  if (!FS_SUPPORTED) { lsSet(UNSAVED_KEY, '1'); updateFileUI(); }
   if (fileHandle && fileHandleVerified) {
     try {
       await writeToHandle(payload);
@@ -1860,38 +1778,6 @@ $('next').onclick = () => { anchor = new Date(anchor.getFullYear(), anchor.getMo
 $('today').onclick = () => { anchor = new Date(); render(); };
 
 $('fileAction').onchange = syncFileActionBtn;
-$('loadLatestBtn').onclick = () => $('importFile').click();
-$('saveFilesBtn').onclick = saveToFiles;
-
-/* Pull down from the top of the page to load the latest file (home-screen apps on iOS have no native pull-to-refresh). */
-(function () {
-  // Safari tabs already have their own pull-to-refresh; only home-screen (standalone) apps lack one.
-  const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
-  if (FS_SUPPORTED || !standalone) return;
-  const THRESHOLD = 90, hint = $('pullHint');
-  let startY = null, pull = 0;
-  const dialogOpen = () => [...document.querySelectorAll('.dialog-backdrop')].some(d => d.style.display !== 'none');
-  function reset() { startY = null; pull = 0; hint.style.transition = 'transform .2s'; hint.style.transform = 'translate(-50%, -100%)'; }
-  document.addEventListener('touchstart', e => {
-    startY = window.scrollY <= 0 && e.touches.length === 1 && !dialogOpen() ? e.touches[0].clientY : null;
-    pull = 0;
-  }, { passive: true });
-  document.addEventListener('touchmove', e => {
-    if (startY === null) return;
-    if (window.scrollY > 0) { reset(); return; }
-    pull = Math.max(0, e.touches[0].clientY - startY);
-    if (!pull) return;
-    hint.textContent = pull >= THRESHOLD ? 'Release to load latest' : 'Pull to load latest';
-    hint.style.transition = 'none';
-    hint.style.transform = 'translate(-50%, ' + (Math.min(pull, THRESHOLD) * 0.6 - hint.offsetHeight) + 'px)';
-  }, { passive: true });
-  document.addEventListener('touchend', () => {
-    const go = startY !== null && pull >= THRESHOLD;
-    reset();
-    if (go) $('importFile').click();
-  }, { passive: true });
-  document.addEventListener('touchcancel', reset, { passive: true });
-})();
 $('importFile').onchange = e => {
   const file = e.target.files[0];
   if (file) importJSON(file);
