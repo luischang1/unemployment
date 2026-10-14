@@ -378,6 +378,19 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+  /* ---------- read-only mode (touch devices, which can't link the JSON file) ---------- */
+  .readonly .addbar, .readonly #recalcBtn, .readonly #bulkInactiveBtn { display: none; }
+  .readonly .toolbar .prints { display: none; }
+  .readonly #fileAction { display: none; }
+  .dialog.viewing .input:disabled {
+    opacity: 1; -webkit-text-fill-color: var(--ink); cursor: default;
+  }
+  .dialog.viewing .input:not(#f-stars)::placeholder { color: transparent; }
+  .dialog.viewing .input:hover { border-color: var(--divider); }
+  .dialog.viewing .opt { cursor: default; pointer-events: none; }
+  .dialog.viewing .opt:hover { background: transparent; }
+  .dialog.viewing .opt.on:hover { background: var(--accent); }
+
   .printout { display: none; }
 
   @media print {
@@ -531,14 +544,18 @@
     </div>
   </div>
 
-  <p class="disclaimer">
+  <p class="disclaimer" id="roNote" style="display:none;">
+    This device shows a read-only copy of the log. Add, edit, and delete happen on the computer where the JSON file lives;
+    tap Use file to bring in the latest copy.
+  </p>
+  <p class="disclaimer" id="rwNote">
     Entries save to a JSON file you choose on your computer (Chrome and Edge), or stay in this browser with manual
     import and export elsewhere. Your Name and Social Security number is deliberately not collected — write it on
     the printed form by hand. For a PDF, print and choose Save as PDF in landscape, and in "More settings" turn off
     "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
     so it can't be turned off automatically.
   </p>
-  <p class="version">Version 4.1 &middot; 20261006 &middot; summary popup on the stat tags</p>
+  <p class="version">Version 4.2 &middot; 20261014 &middot; read-only view on phones and tablets</p>
 </div>
 
 <div class="addbar">
@@ -798,6 +815,18 @@
 <script>
 const KEY = 'twc-worksearch-v1';
 const FS_SUPPORTED = 'showOpenFilePicker' in window;
+/* Phones and tablets can't link the JSON file, so edits could never reach it. Show a read-only view there,
+   detected from the user agent (iPadOS reports itself as a Mac, so that case is told apart by its touch screen).
+   Add ?readonly to the address to preview that mode on a desktop browser. */
+const READ_ONLY = /Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle/i.test(navigator.userAgent) ||
+  (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1) ||
+  /[?&]readonly\b/.test(location.search);
+document.documentElement.classList.toggle('readonly', READ_ONLY);
+document.addEventListener('DOMContentLoaded', () => {
+  if (READ_ONLY) $('fileAction').querySelector('option[value=create]').remove();
+  $('roNote').style.display = READ_ONLY ? '' : 'none';
+  $('rwNote').style.display = READ_ONLY ? 'none' : '';
+});
 
 /* ---------- Star rating rules (also stored in the JSON, sibling of activities) ---------- */
 const DEFAULT_RULES = {
@@ -1120,7 +1149,10 @@ let fileUseAction = { label: 'Use file', onclick: FS_SUPPORTED ? chooseExistingF
 function updateFileUI() {
   const status = $('fileStatus');
   status.classList.remove('warn');
-  if (fileHandle && fileHandleVerified) {
+  if (READ_ONLY) {
+    status.textContent = 'Read-only on this device. Use file to load the latest JSON.';
+    fileUseAction = { label: 'Use file', onclick: () => $('importFile').click() };
+  } else if (fileHandle && fileHandleVerified) {
     status.textContent = 'Saving to ' + fileHandle.name;
     fileUseAction = { label: 'Use file', onclick: chooseExistingFile };
   } else if (fileHandle && !fileHandleVerified) {
@@ -1136,7 +1168,7 @@ function updateFileUI() {
 }
 function syncFileActionBtn() {
   const btn = $('fileActionBtn');
-  if ($('fileAction').value === 'create') {
+  if (!READ_ONLY && $('fileAction').value === 'create') {
     btn.textContent = 'Create JSON file';
     btn.onclick = FS_SUPPORTED ? createNewDataFile : exportJSON;
   } else {
@@ -1340,6 +1372,9 @@ function resetFilters() {
   filters = { status: '', types: [], workplaces: [], companies: [], minStars: 0, minSalary: 0, city: '' };
 }
 
+const EYE_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+
 function rowHtml(a, showMonth) {
   const d = parseISO(a.date);
   const bits = [];
@@ -1370,7 +1405,7 @@ function rowHtml(a, showMonth) {
     '</div>' +
     '<div class="side">' +
       '<div class="tools">' +
-        '<button class="btn btn-ghost btn-icon" onclick="editItem(\'' + a.id + '\')" aria-label="Edit activity" title="Edit activity">&#9998;</button>' +
+        '<button class="btn btn-ghost btn-icon" onclick="editItem(\'' + a.id + '\')" aria-label="' + (READ_ONLY ? 'View activity details' : 'Edit activity') + '" title="' + (READ_ONLY ? 'View details' : 'Edit activity') + '">' + (READ_ONLY ? EYE_ICON : '&#9998;') + '</button>' +
       '</div>' +
       renderStars(effectiveStars(a)) + inactiveTag +
     '</div>' +
@@ -1640,7 +1675,7 @@ function updateStarsPreview() {
 function openPanel(item, tpl) {
   editingId = item ? item.id : null;
   const t = tpl ? TEMPLATES[tpl] : null;
-  $('panelTitle').textContent = item ? 'Edit activity' : (t ? t.label : 'New activity');
+  $('panelTitle').textContent = item ? (READ_ONLY ? 'Activity details' : 'Edit activity') : (t ? t.label : 'New activity');
   const showLinkApp = !item && tpl !== 'search' && tpl !== 'training';
   $('linkAppField').style.display = showLinkApp ? '' : 'none';
   if (showLinkApp) { buildLinkAppOptions(); $('f-linkapp').value = ''; }
@@ -1673,11 +1708,23 @@ function openPanel(item, tpl) {
   $('f-stars').value  = item && typeof item.stars === 'number' ? item.stars : '';
   setExtraOpen(!!((item && (item.city || item.address || item.email || item.phone || item.detail || item.techMatch || item.missionFit ||
     item.status === 'inactive' || (item.result && item.result !== 'application'))) || (t && t.status === 'inactive')));
-  $('panelDeleteBtn').style.display = item ? '' : 'none';
+  $('panelDeleteBtn').style.display = item && !READ_ONLY ? '' : 'none';
+  setPanelReadOnly(READ_ONLY);
   syncPanelChecks();
   updateStarsPreview();
   $('panelBackdrop').style.display = 'grid';
-  $('f-title').focus();
+  if (!READ_ONLY) $('f-title').focus();
+}
+/* Read-only: text and number fields stay selectable (readOnly); selects, checkboxes, and the date picker can't be, so they're disabled. */
+function setPanelReadOnly(on) {
+  document.querySelector('#panelBackdrop .dialog').classList.toggle('viewing', on);
+  document.querySelectorAll('#panelBackdrop .input, #panelBackdrop input[type=checkbox]').forEach(el => {
+    if (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'date') el.disabled = on;
+    else el.readOnly = on;
+  });
+  $('saveBtn').style.display = on ? 'none' : '';
+  $('cancelBtn').textContent = on ? 'Close' : 'Cancel';
+  document.querySelector('#panelBackdrop .dialog-actions .hint').style.display = on ? 'none' : '';
 }
 function closePanel() { $('panelBackdrop').style.display = 'none'; editingId = null; }
 
@@ -1706,6 +1753,7 @@ window.editItem = id => { const it = state.activities.find(a => a.id === id); if
 
 let pendingDeleteId = null;
 window.delItem = id => {
+  if (READ_ONLY) return;
   const item = state.activities.find(a => a.id === id);
   if (!item) return;
   pendingDeleteId = id;
@@ -1728,10 +1776,11 @@ $('confirmDeleteBtn').onclick = async () => {
   await save(); render(); toast('Activity deleted');
 };
 
-$('addBtn').onclick = () => openPanel(null, $('addType').value);
+$('addBtn').onclick = () => { if (!READ_ONLY) openPanel(null, $('addType').value); };
 $('extraToggle').onclick = () => setExtraOpen($('extraFields').style.display === 'none');
 
 async function doSave() {
+  if (READ_ONLY) return;
   const date = $('f-date').value;
   if (!date) { toast('Pick a date first'); $('f-date').focus(); return; }
   const status = $('f-status').value;
@@ -1940,7 +1989,7 @@ function openBulk() {
   $('b-company').focus();
 }
 function closeBulk() { $('bulkBackdrop').style.display = 'none'; }
-$('bulkInactiveBtn').onclick = openBulk;
+$('bulkInactiveBtn').onclick = () => { if (!READ_ONLY) openBulk(); };
 $('bulkClose').onclick = closeBulk;
 $('bulkCancelBtn').onclick = closeBulk;
 $('bulkBackdrop').addEventListener('keydown', e => { if (e.key === 'Escape') closeBulk(); });
@@ -1959,6 +2008,7 @@ $('bulkApplyBtn').onclick = async () => {
 };
 
 $('recalcBtn').onclick = async () => {
+  if (READ_ONLY) return;
   state.activities = state.activities.map(a => ({ ...a, stars: calcStars(a) }));
   await save(); render(); toast('Recalculated stars for ' + state.activities.length + ' activities');
 };
