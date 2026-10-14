@@ -1,3 +1,6 @@
 /twc-worksearch-data.json
 
 .DS_Store
+
+# PDFs (resumes, prep docs) stay local
+*.pdf
