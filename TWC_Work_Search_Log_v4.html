@@ -1498,7 +1498,7 @@ function buildCompanyOptions() {
 let linkAppChoices = [];
 function applicationOptions() {
   const map = new Map();
-  state.activities.forEach(a => {
+  activeActivities().forEach(a => {
     const company = (a.company || '').trim();
     if (!company) return;
     const title = (a.title || '').trim();
