@@ -555,7 +555,7 @@
     "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
     so it can't be turned off automatically.
   </p>
-  <p class="version">Version 4.3 &middot; 20261019 &middot; active-only application picker, index redirect</p>
+  <p class="version">Version 4.4 &middot; 20261021 &middot; fix double-save adding an activity twice</p>
 </div>
 
 <div class="addbar">
@@ -1779,8 +1779,15 @@ $('confirmDeleteBtn').onclick = async () => {
 $('addBtn').onclick = () => { if (!READ_ONLY) openPanel(null, $('addType').value); };
 $('extraToggle').onclick = () => setExtraOpen($('extraFields').style.display === 'none');
 
+/* The panel stays open until the file write finishes, so a double-click or a held/repeated Cmd+Enter in that
+   window would add the same new activity twice. Ignore saves while one is in flight. */
+let saving = false;
 async function doSave() {
-  if (READ_ONLY) return;
+  if (READ_ONLY || saving) return;
+  saving = true;
+  try { await saveActivity(); } finally { saving = false; }
+}
+async function saveActivity() {
   const date = $('f-date').value;
   if (!date) { toast('Pick a date first'); $('f-date').focus(); return; }
   const status = $('f-status').value;
