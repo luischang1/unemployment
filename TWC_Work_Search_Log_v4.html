@@ -163,6 +163,7 @@
   .tag-short { background: var(--accent2-100); color: var(--accent2-800); }
   .stats-list .note { font-size: 13px; color: color-mix(in srgb, var(--ink) 50%, transparent); }
   .stepper.off { opacity: .35; pointer-events: none; }
+  .stepper .btn:disabled { opacity: .35; cursor: default; pointer-events: none; }
 
   /* ---------- filter popover ---------- */
   .filterwrap { position: relative; align-self: center; }
@@ -461,8 +462,10 @@
 
   <div class="weekbar">
     <div class="stepper" id="stepper">
+      <button class="btn btn-secondary btn-icon" id="first" title="Oldest week with activity" aria-label="Oldest week with activity">&#171;</button>
       <button class="btn btn-secondary btn-icon" id="prev" title="Previous week" aria-label="Previous week">&#8249;</button>
       <button class="btn btn-secondary btn-icon" id="next" title="Next week" aria-label="Next week">&#8250;</button>
+      <button class="btn btn-secondary btn-icon" id="last" title="Latest week with activity" aria-label="Latest week with activity">&#187;</button>
     </div>
     <h2 id="weeklabel"></h2>
     <button class="btn btn-ghost" id="today">This week</button>
@@ -555,7 +558,7 @@
     "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
     so it can't be turned off automatically.
   </p>
-  <p class="version">Version 4.4 &middot; 20261021 &middot; fix double-save adding an activity twice</p>
+  <p class="version">Version 4.5 &middot; 20261022 &middot; jump to oldest / latest week with activity</p>
 </div>
 
 <div class="addbar">
@@ -1424,11 +1427,22 @@ function renderWeeklyStat() {
   }
 }
 
+/* Oldest / latest week that has any activity logged; the « » buttons jump there and disable once you're on it. */
+function activityBounds() {
+  const dates = state.activities.map(a => a.date).filter(Boolean).sort();
+  return dates.length ? { first: weekStart(parseISO(dates[0])), last: weekStart(parseISO(dates[dates.length - 1])) } : null;
+}
+function syncEndButtons() {
+  const b = activityBounds(), cur = toISO(weekStart(anchor));
+  $('first').disabled = !b || cur <= toISO(b.first);
+  $('last').disabled = !b || cur >= toISO(b.last);
+}
 function render() {
   const filtering = filterActive();
   renderChips();
   syncFilterButton();
   $('stepper').classList.toggle('off', filtering);
+  syncEndButtons();
   $('today').style.display = filtering ? 'none' : '';
   renderStats();
   renderWeeklyStat();
@@ -1834,6 +1848,8 @@ $('panelBackdrop').addEventListener('keydown', e => {
 
 $('prev').onclick = () => { anchor = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - 7); render(); };
 $('next').onclick = () => { anchor = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + 7); render(); };
+$('first').onclick = () => { const b = activityBounds(); if (b) { anchor = b.first; render(); } };
+$('last').onclick = () => { const b = activityBounds(); if (b) { anchor = b.last; render(); } };
 $('today').onclick = () => { anchor = new Date(); render(); };
 
 $('fileAction').onchange = syncFileActionBtn;
