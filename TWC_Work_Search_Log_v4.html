@@ -464,11 +464,11 @@
     <div class="stepper" id="stepper">
       <button class="btn btn-secondary btn-icon" id="first" title="Oldest week with activity" aria-label="Oldest week with activity">&#171;</button>
       <button class="btn btn-secondary btn-icon" id="prev" title="Previous week" aria-label="Previous week">&#8249;</button>
+      <button class="btn btn-ghost" id="today">This week</button>
       <button class="btn btn-secondary btn-icon" id="next" title="Next week" aria-label="Next week">&#8250;</button>
       <button class="btn btn-secondary btn-icon" id="last" title="Latest week with activity" aria-label="Latest week with activity">&#187;</button>
     </div>
     <h2 id="weeklabel"></h2>
-    <button class="btn btn-ghost" id="today">This week</button>
     <ul class="stats-list" id="statsList">
       <li id="weeklyStat"><span class="tag" id="statusTag"></span><span class="note" id="statusNote"></span></li>
       <li title="Distinct companies you've applied to"><button type="button" class="tag tag-neutral" id="statCompanies"></button></li>
@@ -558,7 +558,7 @@
     "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
     so it can't be turned off automatically.
   </p>
-  <p class="version">Version 4.5 &middot; 20261022 &middot; jump to oldest / latest week with activity</p>
+  <p class="version">Version 4.6 &middot; 20261022 &middot; This week link moved between the week arrows</p>
 </div>
 
 <div class="addbar">
@@ -1443,7 +1443,6 @@ function render() {
   syncFilterButton();
   $('stepper').classList.toggle('off', filtering);
   syncEndButtons();
-  $('today').style.display = filtering ? 'none' : '';
   renderStats();
   renderWeeklyStat();
 
