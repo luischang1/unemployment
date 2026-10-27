@@ -474,7 +474,8 @@
       <li title="Distinct companies you've applied to"><button type="button" class="tag tag-neutral" id="statCompanies"></button></li>
       <li title="Distinct company + job title combinations applied to"><button type="button" class="tag tag-neutral" id="statApps"></button></li>
       <li title="Applications not marked inactive"><button type="button" class="tag tag-neutral" id="statActive"></button></li>
-      <li title="Active applications applied to within the last month"><button type="button" class="tag tag-neutral" id="statRecent"></button></li>
+      <li title="Company + job title combinations with an interview logged"><button type="button" class="tag tag-neutral" id="statInterviewed"></button></li>
+      <li title="Company + job title combinations with a recruiter call logged but no interview"><button type="button" class="tag tag-neutral" id="statRecruiter"></button></li>
     </ul>
     <div class="filterwrap">
       <button class="btn btn-secondary" id="filterBtn" aria-haspopup="true">Filter</button>
@@ -558,7 +559,7 @@
     "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
     so it can't be turned off automatically.
   </p>
-  <p class="version">Version 4.6 &middot; 20261022 &middot; This week link moved between the week arrows</p>
+  <p class="version">Version 4.7 &middot; 20261026 &middot; Interviewed and recruiter call filters replace recent active</p>
 </div>
 
 <div class="addbar">
@@ -1266,33 +1267,56 @@ function applicationGroups() {
   });
   return [...map.values()];
 }
+/* Interviewed = company + title with an interview logged; Recruiter call = recruiter call logged and no interview for that role */
+function contactGroups() {
+  const interviewed = new Map(), recruiter = new Map();
+  const appActive = new Map();
+  state.activities.filter(a => a.type === 'applied').forEach(a => {
+    const key = (a.company || '').trim().toLowerCase() + '|' + (a.title || '').trim().toLowerCase();
+    if (a.status !== 'inactive') appActive.set(key, true); else if (!appActive.has(key)) appActive.set(key, false);
+  });
+  const add = (map, a) => {
+    const key = (a.company || '').trim().toLowerCase() + '|' + (a.title || '').trim().toLowerCase();
+    let g = map.get(key);
+    if (!g) { g = { company: a.company, title: a.title, date: a.date, active: appActive.has(key) ? appActive.get(key) : false }; map.set(key, g); }
+    else if (a.date > g.date) g.date = a.date;
+    if (!appActive.has(key) && a.status !== 'inactive') g.active = true;
+  };
+  state.activities.forEach(a => {
+    if (a.type === 'interview') add(interviewed, a);
+    else if (a.type === 'recruiter') add(recruiter, a);
+  });
+  interviewed.forEach((_, k) => recruiter.delete(k));
+  return { interviewed: [...interviewed.values()], recruiter: [...recruiter.values()] };
+}
 function computeStats() {
   const apps = applicationGroups();
   const companies = new Set(apps.map(g => (g.company || '').trim()).filter(Boolean)).size;
   const active = apps.filter(g => g.active);
-  const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - 1);
-  const cutoffISO = toISO(cutoff);
-  const recent = active.filter(g => g.date >= cutoffISO).length;
-  return { companies, total: apps.length, active: active.length, recent };
+  const contacts = contactGroups();
+  const activeCount = list => list.filter(g => g.active).length;
+  return { companies, total: apps.length, active: active.length,
+    interviewed: contacts.interviewed.length, interviewedActive: activeCount(contacts.interviewed),
+    recruiter: contacts.recruiter.length, recruiterActive: activeCount(contacts.recruiter) };
 }
 function statLists() {
   const apps = applicationGroups();
   const byDate = (a, b) => b.date.localeCompare(a.date);
   const appRows = list => list.map(g => [g.company || 'Unknown company', g.title || '', g.date]);
   const appCols = ['Company', 'Job title', 'Date'];
+  const contactCols = ['Company', 'Job title', 'Date', 'Status'];
+  const contactRows = list => list.map(g => [g.company || 'Unknown company', g.title || '', g.date, g.active ? 'Active' : 'Inactive']);
   const counts = new Map();
   apps.forEach(g => { const c = (g.company || '').trim(); if (c) counts.set(c, (counts.get(c) || 0) + 1); });
-  const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - 1);
-  const cutoffISO = toISO(cutoff);
   const active = apps.filter(g => g.active).sort(byDate);
+  const contacts = contactGroups();
   return [
     { name: 'Companies', cols: ['Company', 'Applications'],
       rows: [...counts].sort((a, b) => a[0].localeCompare(b[0])) },
     { name: 'Applications', cols: appCols, rows: appRows([...apps].sort(byDate)) },
     { name: 'Active', cols: appCols, rows: appRows(active) },
-    { name: 'Recent active', cols: appCols, rows: appRows(active.filter(g => g.date >= cutoffISO)) }
+    { name: 'Interviewed', cols: contactCols, rows: contactRows(contacts.interviewed.sort(byDate)) },
+    { name: 'Recruiter call', cols: contactCols, rows: contactRows(contacts.recruiter.sort(byDate)) }
   ];
 }
 function openStat() {
@@ -1307,7 +1331,7 @@ function openStat() {
   $('statClose').focus();
 }
 function closeStat() { $('statBackdrop').style.display = 'none'; }
-['statCompanies', 'statApps', 'statActive', 'statRecent'].forEach(id => { $(id).onclick = openStat; });
+['statCompanies', 'statApps', 'statActive', 'statInterviewed', 'statRecruiter'].forEach(id => { $(id).onclick = openStat; });
 $('statClose').onclick = closeStat;
 $('statBackdrop').addEventListener('keydown', e => { if (e.key === 'Escape') closeStat(); });
 $('statBackdrop').addEventListener('click', e => { if (e.target === $('statBackdrop')) closeStat(); });
@@ -1316,7 +1340,8 @@ function renderStats() {
   $('statCompanies').textContent = s.companies + (s.companies === 1 ? ' company' : ' companies');
   $('statApps').textContent = s.total + (s.total === 1 ? ' application' : ' applications');
   $('statActive').textContent = s.active + ' active';
-  $('statRecent').textContent = s.recent + ' recent active';
+  $('statInterviewed').textContent = s.interviewed + ' interviewed (' + s.interviewedActive + ' active)';
+  $('statRecruiter').textContent = s.recruiter + ' recruiter ' + (s.recruiter === 1 ? 'call' : 'calls') + ' (' + s.recruiterActive + ' active)';
 }
 
 const RESULT_LABEL = { application:'Application filed', other:'Other', nothiring:'Not hiring', hired:'Hired' };
