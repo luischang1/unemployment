@@ -485,6 +485,10 @@
           <div class="opts" id="fStatus"></div>
         </section>
         <section>
+          <h4>Contract type</h4>
+          <div class="opts" id="fContract"></div>
+        </section>
+        <section>
           <h4>Activity type</h4>
           <div class="opts" id="fTypes"></div>
         </section>
@@ -559,7 +563,7 @@
     "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
     so it can't be turned off automatically.
   </p>
-  <p class="version">Version 4.11 &middot; 20261112 &middot; Contract checkbox next to Status when adding an activity</p>
+  <p class="version">Version 4.12 &middot; 20261112 &middot; Contract type filter in the Filter popup</p>
 </div>
 
 <div class="addbar">
@@ -913,7 +917,7 @@ function renderStars(value) {
 }
 
 let state = { activities: [], deleted: [], rules: DEFAULT_RULES };
-let filters = { status: '', types: [], workplaces: [], companies: [], minStars: 0, minSalary: 0, city: '' };
+let filters = { status: '', contract: '', types: [], workplaces: [], companies: [], minStars: 0, minSalary: 0, city: '' };
 let chipHandlers = [];
 let anchor = new Date();
 let editingId = null;
@@ -1401,6 +1405,8 @@ function matchesFilter(a) {
   const f = filters;
   if (f.status === 'active' && a.status === 'inactive') return false;
   if (f.status === 'inactive' && a.status !== 'inactive') return false;
+  if (f.contract === 'contract' && !a.contract) return false;
+  if (f.contract === 'fulltime' && a.contract) return false;
   if (f.types.length && !f.types.includes(a.type || '')) return false;
   if (f.workplaces.length && !f.workplaces.includes(loc(a).workplace)) return false;
   if (f.companies.length && !f.companies.includes(a.company || '')) return false;
@@ -1415,10 +1421,10 @@ function matchesFilter(a) {
 }
 function filterActive() {
   const f = filters;
-  return !!(f.status || f.types.length || f.workplaces.length || f.companies.length || f.minStars > 0 || f.minSalary > 0 || f.city);
+  return !!(f.status || f.contract || f.types.length || f.workplaces.length || f.companies.length || f.minStars > 0 || f.minSalary > 0 || f.city);
 }
 function resetFilters() {
-  filters = { status: '', types: [], workplaces: [], companies: [], minStars: 0, minSalary: 0, city: '' };
+  filters = { status: '', contract: '', types: [], workplaces: [], companies: [], minStars: 0, minSalary: 0, city: '' };
 }
 
 const EYE_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -1527,6 +1533,7 @@ function renderChips() {
   const box = $('filterchips');
   const f = filters, chips = [];
   const add = (label, clear) => chips.push({ label, clear });
+  if (f.contract) add(f.contract === 'contract' ? 'Contract only' : 'Full time only', () => { filters.contract = ''; });
   if (f.status) add(f.status === 'active' ? 'Active only' : 'Inactive only', () => { filters.status = ''; });
   f.types.forEach(t => add(ACTIVITY_TYPES[t] || 'Untyped', () => { filters.types = filters.types.filter(x => x !== t); }));
   f.workplaces.forEach(w => add(WORKPLACE[w] || 'Workplace unspecified', () => { filters.workplaces = filters.workplaces.filter(x => x !== w); }));
@@ -1609,7 +1616,7 @@ function bindOpt(el) {
   el.onclick = e => {
     e.preventDefault();
     const g = el.dataset.group, v = el.dataset.val;
-    if (g === 'status') filters.status = v;
+    if (g === 'status' || g === 'contract') filters[g] = v;
     else filters[g] = filters[g].includes(v) ? filters[g].filter(x => x !== v) : [...filters[g], v];
     syncFilterUI(); render();
   };
@@ -1622,7 +1629,7 @@ function syncFilterUI() {
   $('companyToggle').classList.toggle('on', n > 0);
   $('filterPop').querySelectorAll('.opt').forEach(el => {
     const g = el.dataset.group, v = el.dataset.val;
-    const on = g === 'status' ? filters.status === v : filters[g].includes(v);
+    const on = (g === 'status' || g === 'contract') ? filters[g] === v : filters[g].includes(v);
     el.classList.toggle('on', on);
   });
   $('fStars').value = filters.minStars;
@@ -1636,6 +1643,8 @@ function syncFilterUI() {
     '<label class="opt" data-group="' + group + '" data-val="' + val + '">' + esc(label) + '</label>';
   $('fStatus').innerHTML = [['', 'All'], ['active', 'Active'], ['inactive', 'Inactive']]
     .map(([k, v]) => optHtml('status', k, v)).join('');
+  $('fContract').innerHTML = [['', 'All'], ['fulltime', 'Full time'], ['contract', 'Contract']]
+    .map(([k, v]) => optHtml('contract', k, v)).join('');
   $('fTypes').innerHTML = Object.keys(ACTIVITY_TYPES).map(k => optHtml('types', k, ACTIVITY_TYPES[k])).join('') +
     optHtml('types', '', 'Untyped');
   $('fPlaces').innerHTML = Object.keys(WORKPLACE).map(k => optHtml('workplaces', k, WORKPLACE[k])).join('') +
