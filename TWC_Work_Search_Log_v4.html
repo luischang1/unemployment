@@ -559,7 +559,7 @@
     "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
     so it can't be turned off automatically.
   </p>
-  <p class="version">Version 4.8 &middot; 20261026 &middot; Interviewed and recruiter call lists sorted active first</p>
+  <p class="version">Version 4.9 &middot; 20261112 &middot; Mark inactive filters stale applications by date and no interview or call, drops posting link</p>
 </div>
 
 <div class="addbar">
@@ -778,21 +778,34 @@
       <button class="btn btn-ghost" id="bulkClose">Close</button>
     </div>
     <p style="margin-top:10px; font-size:14px; color:color-mix(in srgb, var(--ink) 70%, transparent);">
-      Pick a company, and optionally narrow to one job title or posting link. Every matching activity is set to
-      Inactive, which drops it to zero stars. Nothing is deleted.
+      Pick a company, and optionally narrow to one job title, or use filters to catch every stale
+      application at once. Every matching activity is set to Inactive, which drops it to zero stars. Nothing is deleted.
     </p>
     <div class="grid4" style="grid-template-columns:1fr;">
       <div class="field">
+        <label for="b-mode">Choose activities by</label>
+        <select id="b-mode" class="input">
+          <option value="company">Company and job title</option>
+          <option value="filters">Filters (stale applications)</option>
+        </select>
+      </div>
+      <div class="field" data-bulk="company">
         <label for="b-company">Company</label>
         <select id="b-company" class="input"></select>
       </div>
-      <div class="field">
+      <div class="field" data-bulk="company">
         <label for="b-title">Job title</label>
         <select id="b-title" class="input" disabled></select>
       </div>
-      <div class="field">
-        <label for="b-url">Job posting link</label>
-        <select id="b-url" class="input" disabled></select>
+      <div class="field" data-bulk="filters" style="display:none;">
+        <label for="b-since">No change since</label>
+        <input type="date" id="b-since" class="input">
+      </div>
+      <div class="field" data-bulk="filters" style="display:none;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px; margin:0;">
+          <input type="checkbox" id="b-nocontact" checked>
+          Only roles with no interview or recruiter call
+        </label>
       </div>
       <div class="field">
         <label for="b-reason">Add a note</label>
@@ -806,6 +819,7 @@
       </div>
     </div>
     <p id="bulkCount" style="margin-top:16px; font-size:14px;"></p>
+    <ul id="bulkList" style="display:none; margin:8px 0 0; padding-left:18px; max-height:160px; overflow:auto; font-size:13px;"></ul>
     <div class="dialog-actions">
       <button class="btn btn-primary" id="bulkApplyBtn">Mark inactive</button>
       <button class="btn btn-secondary" id="bulkCancelBtn">Cancel</button>
@@ -1986,15 +2000,38 @@ function appendNote(existing, line) {
 function distinct(list) { return [...new Set(list.filter(Boolean))].sort((a, b) => a.localeCompare(b)); }
 function activeActivities() { return state.activities.filter(a => a.status !== 'inactive'); }
 function bulkSelection() {
-  return { company: $('b-company').value, title: $('b-title').value, url: $('b-url').value };
+  return { company: $('b-company').value, title: $('b-title').value };
+}
+function roleKey(a) { return (a.company || '').trim().toLowerCase() + '|' + (a.title || '').trim().toLowerCase(); }
+/* Stale roles: a company + job title with an application, whose latest activity is before the cutoff,
+   and (optionally) that never had an interview or recruiter call. */
+function staleRoles() {
+  const since = $('b-since').value;
+  if (!since) return [];
+  const noContact = $('b-nocontact').checked;
+  const roles = new Map();
+  state.activities.forEach(a => {
+    const k = roleKey(a);
+    let r = roles.get(k);
+    if (!r) { r = { company: a.company, title: a.title, last: '', applied: false, contact: false, ids: [] }; roles.set(k, r); }
+    if (a.date > r.last) r.last = a.date;
+    if (a.type === 'applied') r.applied = true;
+    if (a.type === 'interview' || a.type === 'recruiter') r.contact = true;
+    if (a.status !== 'inactive') r.ids.push(a.id);
+  });
+  return [...roles.values()].filter(r => r.applied && r.ids.length && r.last < since && !(noContact && r.contact))
+    .sort((a, b) => a.last.localeCompare(b.last));
 }
 function bulkMatches() {
+  if ($('b-mode').value === 'filters') {
+    const ids = new Set(staleRoles().flatMap(r => r.ids));
+    return state.activities.filter(a => ids.has(a.id));
+  }
   const s = bulkSelection();
   if (!s.company) return [];
   return state.activities.filter(a =>
     a.company === s.company &&
-    (!s.title || a.title === s.title) &&
-    (!s.url || a.url === s.url));
+    (!s.title || a.title === s.title));
 }
 function fillSelect(id, values, anyLabel) {
   const el = $(id);
@@ -2002,27 +2039,33 @@ function fillSelect(id, values, anyLabel) {
     values.map(v => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('');
 }
 function refreshBulk(resetChildren) {
+  const byFilters = $('b-mode').value === 'filters';
+  document.querySelectorAll('[data-bulk]').forEach(el => { el.style.display = el.dataset.bulk === (byFilters ? 'filters' : 'company') ? '' : 'none'; });
   const company = $('b-company').value;
   const scoped = activeActivities().filter(a => a.company === company);
-  if (resetChildren) {
-    fillSelect('b-title', distinct(scoped.map(a => a.title)), 'All job titles');
-    fillSelect('b-url', distinct(scoped.map(a => a.url)), 'Any posting link');
-  } else {
-    const title = $('b-title').value;
-    const urlScope = title ? scoped.filter(a => a.title === title) : scoped;
-    const keep = $('b-url').value;
-    fillSelect('b-url', distinct(urlScope.map(a => a.url)), 'Any posting link');
-    if ([...$('b-url').options].some(o => o.value === keep)) $('b-url').value = keep;
-  }
+  if (resetChildren) fillSelect('b-title', distinct(scoped.map(a => a.title)), 'All job titles');
   $('b-title').disabled = !company;
-  $('b-url').disabled = !company;
 
   const matches = bulkMatches();
   const changing = matches.filter(a => a.status !== 'inactive').length;
   const note = $('bulkCount');
   const line = bulkNoteLine();
   const suffix = ' Their notes get the line “' + line + '”.';
-  if (!company) note.textContent = 'Pick a company to see what would change.';
+  const list = $('bulkList');
+  list.style.display = 'none';
+  if (byFilters) {
+    const roles = staleRoles();
+    if (!$('b-since').value) note.textContent = 'Pick a date to see what would change.';
+    else if (!changing) note.textContent = 'No active applications match those filters.';
+    else {
+      note.textContent = changing + (changing === 1 ? ' activity' : ' activities') + ' across ' + roles.length +
+        (roles.length === 1 ? ' role' : ' roles') + ' will be marked inactive.' + suffix;
+      list.innerHTML = roles.map(r => '<li>' + esc((r.company || 'Unknown company') + (r.title ? ' \u2014 ' + r.title : '')) +
+        ' <span style="opacity:.6;">(last activity ' + esc(r.last) + ')</span></li>').join('');
+      list.style.display = '';
+    }
+  }
+  else if (!company) note.textContent = 'Pick a company to see what would change.';
   else if (!changing) note.textContent = 'No active activities match that selection.';
   else note.textContent = changing + (changing === 1 ? ' activity will be marked inactive.' : ' activities will be marked inactive.') + suffix;
   $('bulkApplyBtn').disabled = !changing;
@@ -2031,7 +2074,10 @@ function refreshBulk(resetChildren) {
 function openBulk() {
   fillSelect('b-company', distinct(activeActivities().map(a => a.company)), 'Choose a company\u2026');
   $('b-title').innerHTML = '<option value="">All job titles</option>';
-  $('b-url').innerHTML = '<option value="">Any posting link</option>';
+  $('b-mode').value = 'company';
+  const back = new Date(); back.setDate(back.getDate() - 30);
+  $('b-since').value = toISO(back);
+  $('b-nocontact').checked = true;
   refreshBulk(true);
   $('bulkBackdrop').style.display = 'grid';
   $('b-company').focus();
@@ -2041,9 +2087,14 @@ $('bulkInactiveBtn').onclick = () => { if (!READ_ONLY) openBulk(); };
 $('bulkClose').onclick = closeBulk;
 $('bulkCancelBtn').onclick = closeBulk;
 $('bulkBackdrop').addEventListener('keydown', e => { if (e.key === 'Escape') closeBulk(); });
+$('b-mode').onchange = () => {
+  if ($('b-mode').value === 'filters') $('b-reason').value = 'noresponse';
+  refreshBulk(true);
+};
+$('b-since').onchange = () => refreshBulk(false);
+$('b-nocontact').onchange = () => refreshBulk(false);
 $('b-company').onchange = () => refreshBulk(true);
 $('b-title').onchange = () => refreshBulk(false);
-$('b-url').onchange = () => refreshBulk(false);
 $('b-reason').onchange = () => refreshBulk(false);
 $('bulkApplyBtn').onclick = async () => {
   const ids = new Set(bulkMatches().filter(a => a.status !== 'inactive').map(a => a.id));
