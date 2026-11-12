@@ -559,7 +559,7 @@
     "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
     so it can't be turned off automatically.
   </p>
-  <p class="version">Version 4.9 &middot; 20261112 &middot; Mark inactive filters stale applications by date and no interview or call, drops posting link</p>
+  <p class="version">Version 4.10 &middot; 20261112 &middot; Calculate stars only recalculates active activities</p>
 </div>
 
 <div class="addbar">
@@ -2108,8 +2108,13 @@ $('bulkApplyBtn').onclick = async () => {
 
 $('recalcBtn').onclick = async () => {
   if (READ_ONLY) return;
-  state.activities = state.activities.map(a => ({ ...a, stars: calcStars(a) }));
-  await save(); render(); toast('Recalculated stars for ' + state.activities.length + ' activities');
+  let count = 0;
+  state.activities = state.activities.map(a => {
+    if (a.status === 'inactive') return a;
+    count++;
+    return { ...a, stars: calcStars(a) };
+  });
+  await save(); render(); toast('Recalculated stars for ' + count + (count === 1 ? ' active activity' : ' active activities'));
 };
 
 (async () => {
