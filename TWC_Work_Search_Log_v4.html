@@ -559,7 +559,7 @@
     "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
     so it can't be turned off automatically.
   </p>
-  <p class="version">Version 4.10 &middot; 20261112 &middot; Calculate stars only recalculates active activities</p>
+  <p class="version">Version 4.11 &middot; 20261112 &middot; Contract checkbox next to Status when adding an activity</p>
 </div>
 
 <div class="addbar">
@@ -648,7 +648,7 @@
     </div>
 
     <div class="extra-toggle">
-      <button class="btn btn-ghost" id="extraToggle">City, address, type, email, phone, result, status, equity, star rating inputs</button>
+      <button class="btn btn-ghost" id="extraToggle">City, address, type, email, phone, result, status, contract, equity, star rating inputs</button>
     </div>
     <div class="grid4" id="extraFields" style="display:none;">
       <div class="field">
@@ -709,6 +709,12 @@
           <option value="">Active</option>
           <option value="inactive">Inactive</option>
         </select>
+      </div>
+      <div class="field">
+        <label>Contract type</label>
+        <div class="opts">
+          <label class="opt" data-chk="f-contract" title="Leave off for full time"><input type="checkbox" id="f-contract">Contract</label>
+        </div>
       </div>
       <div class="field span2">
         <label for="f-techmatch">Tech stack match</label>
@@ -1435,6 +1441,7 @@ function rowHtml(a, showMonth) {
   ].filter(Boolean).join(' &middot; ');
   const typeTag = ACTIVITY_TYPES[a.type] ? '<span class="tag tag-neutral">' + esc(ACTIVITY_TYPES[a.type]) + '</span> ' : '';
   const inactiveTag = a.status === 'inactive' ? '<span class="tag tag-inactive">Inactive</span>' : '';
+  const contractTag = a.contract ? '<span class="tag tag-neutral">Contract</span> ' : '';
   return '<div class="row-hit">' +
     '<div class="day"><div class="dow">' + DOW[d.getDay()] + '</div><div class="num">' + d.getDate() + '</div>' +
       (showMonth ? '<div class="mon">' + MON_S[d.getMonth()] + ' ' + d.getFullYear() + '</div>' : '') + '</div>' +
@@ -1444,7 +1451,7 @@ function rowHtml(a, showMonth) {
       (a.activity ? '<div class="act">' + esc(a.activity) + '</div>' : '') +
       (contact ? '<div class="meta">' + contact + '</div>' : '') +
       link +
-      '<div class="result">' + typeTag + '<span class="tag tag-neutral">' + RESULT_LABEL[a.result] + (a.detail ? ': ' + esc(a.detail) : '') + '</span></div>' +
+      '<div class="result">' + typeTag + contractTag + '<span class="tag tag-neutral">' + RESULT_LABEL[a.result] + (a.detail ? ': ' + esc(a.detail) : '') + '</span></div>' +
     '</div>' +
     '<div class="side">' +
       '<div class="tools">' +
@@ -1756,11 +1763,12 @@ function openPanel(item, tpl) {
   $('f-detail').value = item ? (item.detail || '') : (t ? t.detail : '');
   $('f-notes').value  = item ? (item.notes || '') : (t && t.notes ? t.notes : '');
   $('f-status').value = item ? (item.status || '') : (t && t.status ? t.status : '');
+  $('f-contract').checked = !!(item && item.contract);
   $('f-techmatch').value = item ? (item.techMatch || '') : '';
   $('f-missionfit').value = item ? (item.missionFit || '') : '';
   $('f-stars').value  = item && typeof item.stars === 'number' ? item.stars : '';
   setExtraOpen(!!((item && (item.city || item.address || item.email || item.phone || item.detail || item.techMatch || item.missionFit ||
-    item.status === 'inactive' || (item.result && item.result !== 'application'))) || (t && t.status === 'inactive')));
+    item.status === 'inactive' || item.contract || (item.result && item.result !== 'application'))) || (t && t.status === 'inactive')));
   $('panelDeleteBtn').style.display = item && !READ_ONLY ? '' : 'none';
   setPanelReadOnly(READ_ONLY);
   syncPanelChecks();
@@ -1863,7 +1871,8 @@ async function saveActivity() {
     notes: $('f-notes').value.trim(),
     techMatch: $('f-techmatch').value,
     missionFit: $('f-missionfit').value,
-    status
+    status,
+    contract: $('f-contract').checked ? true : ''
   };
   const starsInput = $('f-stars').value.trim();
   const stars = status === 'inactive'
