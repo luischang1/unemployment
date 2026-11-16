@@ -104,6 +104,15 @@
   .resources .rlinks { display: flex; flex-wrap: wrap; gap: 14px; font-size: 14px; }
   .resources a { color: var(--accent); text-decoration: underline; }
   .resources a:hover { color: var(--accent-700); }
+  .rcopyrow { margin-top: -2px; }
+  .rcopy { display: inline-flex; align-items: center; gap: 5px; }
+  .btn-copy {
+    display: inline-flex; align-items: center; justify-content: center; padding: 3px; cursor: pointer;
+    color: color-mix(in srgb, var(--ink) 55%, transparent); background: transparent;
+    border: 1px solid transparent; border-radius: var(--radius-md);
+  }
+  .btn-copy:hover { color: var(--accent); border-color: var(--divider); }
+  .btn-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .resources a[target="_blank"]::after {
     content: ""; display: inline-block; width: .8em; height: .8em; margin-left: .3em; vertical-align: -.05em;
     background: currentColor;
@@ -446,10 +455,14 @@
       <span class="rlabel">Resources</span>
       <div class="rlinks">
         <a href="https://apps.twc.texas.gov/UBS/security/logon.do" target="_blank" rel="noopener">TWC</a>
-        <a href="https://www.linkedin.com/in/luischang1/" target="_blank" rel="noopener">LinkedIn</a>
         <a href="https://www.workintexas.com/" target="_blank" rel="noopener">WorkInTexas</a>
         <a href="https://login.risesmart.com/login" target="_blank" rel="noopener">RiseSmart</a>
         <a href="https://my.greenhouse.io/jobs/search?query=Software&location=Austin%2C%20Texas%2C%20United%20States&lat=30.222346&lon=-97.836521&location_type=locality&country_short_name=US&state_short_name=TX&date_posted=past_thirty_days&salary=more_than_180k&work_type[]=hybrid&work_type[]=remote&employment_type[]=full_time" target="_blank" rel="noopener">Greenhouse</a>
+      </div>
+      <div class="rlinks rcopyrow">
+        <span class="rcopy">LinkedIn<button type="button" class="btn-copy" data-copy="https://www.linkedin.com/in/luischang1/" data-label="LinkedIn" title="Copy LinkedIn link" aria-label="Copy LinkedIn link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span>
+        <span class="rcopy">GitHub<button type="button" class="btn-copy" data-copy="https://github.com/luischang1" data-label="GitHub" title="Copy GitHub link" aria-label="Copy GitHub link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span>
+        <span class="rcopy">Blue Ceiba<button type="button" class="btn-copy" data-copy="https://blueceibalasbs.com" data-label="Blue Ceiba" title="Copy Blue Ceiba link" aria-label="Copy Blue Ceiba link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span>
       </div>
       <span class="rlabel" style="margin-top:6px;">Theme</span>
       <div class="theme-toggle" id="themeToggle">
@@ -563,7 +576,7 @@
     "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
     so it can't be turned off automatically.
   </p>
-  <p class="version">Version 4.12 &middot; 20261112 &middot; Contract type filter in the Filter popup</p>
+  <p class="version">Version 4.13 &middot; 20261116 &middot; Copy buttons for LinkedIn, GitHub and Blue Ceiba links</p>
 </div>
 
 <div class="addbar">
@@ -2123,6 +2136,24 @@ $('bulkApplyBtn').onclick = async () => {
   await save(); closeBulk(); render();
   toast('Marked ' + ids.size + (ids.size === 1 ? ' activity inactive' : ' activities inactive'));
 };
+
+document.querySelectorAll('.btn-copy').forEach(btn => {
+  btn.onclick = async () => {
+    const url = btn.dataset.copy;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (_) {}
+      ta.remove();
+      if (!ok) { toast('Could not copy the link'); return; }
+    }
+    toast(btn.dataset.label + ' link copied');
+  };
+});
 
 $('recalcBtn').onclick = async () => {
   if (READ_ONLY) return;
