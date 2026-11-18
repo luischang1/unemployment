@@ -576,7 +576,7 @@
     "Headers and footers" for a clean printout — that setting belongs to the browser's print dialog, not this page,
     so it can't be turned off automatically.
   </p>
-  <p class="version">Version 4.14 &middot; 20261116 &middot; Renamed third copy link to Blue Ceiba Labs</p>
+  <p class="version">Version 4.15 &middot; 20261118 &middot; Mark inactive by filters defaults to 60 days back</p>
 </div>
 
 <div class="addbar">
@@ -2106,7 +2106,7 @@ function openBulk() {
   fillSelect('b-company', distinct(activeActivities().map(a => a.company)), 'Choose a company\u2026');
   $('b-title').innerHTML = '<option value="">All job titles</option>';
   $('b-mode').value = 'company';
-  const back = new Date(); back.setDate(back.getDate() - 30);
+  const back = new Date(); back.setDate(back.getDate() - 60);
   $('b-since').value = toISO(back);
   $('b-nocontact').checked = true;
   refreshBulk(true);
